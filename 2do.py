@@ -34,13 +34,13 @@ cfg['editask'] = "Editing task…"
 cfg['editask2'] = "Enter the new name of the task :"
 # SQL
 cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, active INT, done INT);"
-cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done) VALUES ('{0}', 1, 0);"
+cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done) VALUES (\"{0}\", 1, 0);"
 cfg['sqlArchive'] = "UPDATE tasks SET active = 0 WHERE id = {0};"
 cfg['sqlDone'] = "UPDATE tasks SET done = 1 WHERE id = {0};"
 cfg['sqlUnDone'] = "UPDATE tasks SET done = 0 WHERE id = {0};"
 cfg['sqlGet'] = "SELECT id, task, active, done FROM tasks WHERE active = 1 ;"
 cfg['sqlGet1'] = "SELECT id, task, active, done FROM tasks WHERE id = {0} ;"
-cfg['sqlEdit'] = "UPDATE tasks SET task = '{0}' WHERE id = {1} ;"
+cfg['sqlEdit'] = "UPDATE tasks SET task = \"{0}\" WHERE id = {1} ;"
 
 from sqlite3 import connect
 from os.path import isfile
@@ -76,7 +76,7 @@ def createTables(db, cfg):
 
 def addTask(db, cfg, task):
     sql = cfg['sqlAdd']
-    id = db.execute(sql.format(task)).lastrowid
+    id = db.execute(sql.format(task.replace("\"", "'"))).lastrowid
     db.commit()
     return(id)
 
@@ -100,7 +100,7 @@ def undoneTask(db, cfg, id):
 
 def editTask(db, cfg, id, new):
     sql = cfg['sqlEdit']
-    db.execute(sql.format(new, id))
+    id = db.execute(sql.format(new.replace("\"", "'"), id))
     db.commit()
     return(True)
 
