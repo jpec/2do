@@ -8,39 +8,40 @@ cfg = dict()
 cfg['program'] = PROGRAM
 cfg['version'] = VERSION
 cfg['file'] = "~/todo.sqlite"
-cfg['new'] = "New (n)"
-cfg['edi'] = "Edit (e)"
-cfg['del'] = "Archive (A)"
-cfg['done'] = "Done (d)"
-cfg['undone'] = "Undone (u)"
-cfg['urgent'] = "Urgente"
-cfg['newtask'] = "New task…"
-cfg['newtask2'] = "Enter the name of the new task :"
-cfg['taskdone'] = "{0} (DONE)"
+cfg['new'] = "Nouvelle (n)"
+cfg['edi'] = "Editer (e)"
+cfg['del'] = "Archiver (A)"
+cfg['done'] = "Statut (s)"
+cfg['urgent'] = "Urgence (u)"
+cfg['newtask'] = "Nouvelle tache…"
+cfg['newtask2'] = "Entrez le nom de la nouvelle tache :"
+cfg['taskdone'] = "{0} (terminée)"
 cfg['tasknotdone'] = "{0}"
 cfg['title'] = "{0} {1}"
-cfg['loading'] = "Loading task…"
+cfg['loading'] = "Chargement taches…"
 cfg['errordb'] = "Cannot open DB."
-cfg['ready'] = "Loaded…"
-cfg['newtask'] = "Adding new task…"
-cfg['newtaskok'] = "Task {0} added."
-cfg['errorsaving'] = "Saving return error."
-cfg['taskdel'] = "Task {0} archived."
-cfg['taskdon'] = "Tache {0} done."
-cfg['taskund'] = "Tache {0} undone."
+cfg['ready'] = "Application chargée…"
+cfg['newtask'] = "Ajout nouvelle tache…"
+cfg['newtaskok'] = "Tache {0} ajoutée."
+cfg['errorsaving'] = "Erreur survenue lors de l'enregistrement."
+cfg['taskdel'] = "Tache {0} archivée…"
+cfg['taskdon'] = "Tache {0} : bascule statut…"
+cfg['taskurgent'] = "Tache {0}: bascule urgence…"
 cfg['log'] = "> {0}"
-cfg['taskedit'] = "Task {0} edited."
-cfg['editask'] = "Editing task…"
-cfg['editask2'] = "Enter the new name of the task :"
+cfg['taskedit'] = "Tache {0} modifiée…"
+cfg['editask'] = "Modifier la tache…"
+cfg['editask2'] = "Nouveau nom pour la tache :"
 # SQL
-cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, active INT, done INT);"
-cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done) VALUES (\"{0}\", 1, 0);"
+cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, active INT, done INT, urgent INT);"
+cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done) VALUES (\"{0}\", 1, 0, 0);"
 cfg['sqlArchive'] = "UPDATE tasks SET active = 0 WHERE id = {0};"
 cfg['sqlDone'] = "UPDATE tasks SET done = 1 WHERE id = {0};"
 cfg['sqlUnDone'] = "UPDATE tasks SET done = 0 WHERE id = {0};"
-cfg['sqlGet'] = "SELECT id, task, active, done FROM tasks WHERE active = 1 ;"
-cfg['sqlGet1'] = "SELECT id, task, active, done FROM tasks WHERE id = {0} ;"
+cfg['sqlGet'] = "SELECT id, task, active, done, urgent FROM tasks WHERE active = 1 ;"
+cfg['sqlGet1'] = "SELECT id, task, active, done, urgent FROM tasks WHERE id = {0} ;"
 cfg['sqlEdit'] = "UPDATE tasks SET task = \"{0}\" WHERE id = {1} ;"
+cfg['sqlUrg'] = "UPDATE tasks SET urgent = 1 WHERE id = {0};"
+cfg['sqlLow'] = "UPDATE tasks SET urgent = 0 WHERE id = {0};"
 
 from sqlite3 import connect
 from os.path import isfile
@@ -98,6 +99,18 @@ def undoneTask(db, cfg, id):
     db.commit()
     return(True)
 
+def urgentTask(db, cfg, id):
+    sql = cfg['sqlUrg']
+    db.execute(sql.format(id))
+    db.commit()
+    return(True)
+
+def lowTask(db, cfg, id):
+    sql = cfg['sqlLow']
+    db.execute(sql.format(id))
+    db.commit()
+    return(True)
+
 def editTask(db, cfg, id, new):
     sql = cfg['sqlEdit']
     id = db.execute(sql.format(new.replace("\"", "'"), id))
@@ -112,18 +125,36 @@ def getTasks(db, cfg, archives = False):
 def getTask(db, cfg, id):
     sql = cfg['sqlGet1']
     r = db.execute(sql.format(id))
-    for id, task, active, done in r.fetchall():
+    for id, task, active, done, urgent in r.fetchall():
         return(task)
 
+def isUrgent(db, cfg, id):
+    sql = cfg['sqlGet1']
+    r = db.execute(sql.format(id))
+    for id, task, active, done, urgent in r.fetchall():
+        return(int(urgent))
+    
+def isDone(db, cfg, id):
+    sql = cfg['sqlGet1']
+    r = db.execute(sql.format(id))
+    for id, task, active, done, urgent in r.fetchall():
+        return(int(done))
+    
 def load(app):
     l = getTasks(app.db, app.cfg)
     i = 0
-    for id, task, active, done in l:
+    for id, task, active, done, urgent in l:
         if int(done) > 0:
             lbl = cfg['taskdone'].format(task)
         else:
             lbl = cfg['tasknotdone'].format(task)
         app.ui.lb.insert(id, lbl)
+        if int(done) > 0:
+            app.ui.lb.itemconfig(i, fg='grey')
+        elif int(urgent) > 0:
+            app.ui.lb.itemconfig(i, fg='red')
+        else:
+            app.ui.lb.itemconfig(i, fg='black')
         app.tasks[str(i)] = id
         i = i+1
     return(True)
@@ -135,18 +166,20 @@ def drawUi(app, cfg):
     ui.tb = Frame(ui)
     ui.tb.pack(anchor='nw')
     # tools
-    ui.tb.new = Button(ui.tb, text=cfg['new'], width=12, command=app.new)
+    ui.tb.new = Button(ui.tb, text=cfg['new'], command=app.new)
     ui.tb.new.grid(row=1, column=0, padx=2, pady=2)
-    ui.tb.edi = Button(ui.tb, text=cfg['edi'], width=12, command=app.edi)
+    ui.tb.edi = Button(ui.tb, text=cfg['edi'], command=app.edi)
     ui.tb.edi.grid(row=1, column=1, padx=2, pady=2)
-    ui.tb.arc = Button(ui.tb, text=cfg['del'], width=12, command=app.arc)
-    ui.tb.arc.grid(row=1, column=4, padx=2, pady=2)
-    ui.tb.don = Button(ui.tb, text=cfg['done'], width=12, command=app.don)
+    ui.tb.arc = Button(ui.tb, text=cfg['del'], command=app.arc)
+    ui.tb.arc.grid(row=1, column=5, padx=2, pady=2)
+    ui.tb.don = Button(ui.tb, text=cfg['done'], command=app.don)
     ui.tb.don.grid(row=1, column=2, padx=2, pady=2)
-    ui.tb.und = Button(ui.tb, text=cfg['undone'], width=12, command=app.und)
-    ui.tb.und.grid(row=1, column=3, padx=2, pady=2)
+    #ui.tb.und = Button(ui.tb, text=cfg['undone'], command=app.und)
+    #ui.tb.und.grid(row=1, column=3, padx=2, pady=2)
+    ui.tb.urg = Button(ui.tb, text=cfg['urgent'], command=app.urg)
+    ui.tb.urg.grid(row=1, column=3, padx=2, pady=2)
     # listbox)
-    ui.lb = Listbox(ui)
+    ui.lb = Listbox(ui, font=('Consolas', 10))
     ui.lb.pack(expand=True, fill='both')
     # statusbar
     ui.sb = Frame(ui)
@@ -157,7 +190,8 @@ def drawUi(app, cfg):
     ui.bind("<e>", app.evtEdi)
     ui.bind("<A>", app.evtArc)
     ui.bind("<d>", app.evtDon)
-    ui.bind("<u>", app.evtUnd)
+    #ui.bind("<u>", app.evtUnd)
+    ui.bind("<u>", app.evtUrg)
     return(ui)
 
 class app(object):
@@ -227,19 +261,25 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            doneTask(self.db, self.cfg, id)
+            if isDone(self.db, self.cfg, id):
+                undoneTask(self.db, self.cfg, id)
+            else:
+                doneTask(self.db, self.cfg, id)
             self.log(cfg['taskdon'].format(id))
             self.reload()
+            
+    def evtUrg(self, event):
+        self.urg()
 
-    def evtUnd(self, event):
-        self.und()
-
-    def und(self):
+    def urg(self):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            undoneTask(self.db, self.cfg, id)
-            self.log(cfg['taskund'].format(id))
+            if isUrgent(self.db, self.cfg, id):
+                lowTask(self.db, self.cfg, id)
+            else:
+                urgentTask(self.db, self.cfg, id)
+            self.log(cfg['taskurgent'].format(id))
             self.reload()
         
     def reload(self):
@@ -254,3 +294,4 @@ class app(object):
 
 
 run = app(cfg)
+
