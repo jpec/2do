@@ -174,11 +174,9 @@ def drawUi(app, cfg):
     ui.tb.arc.grid(row=1, column=5, padx=2, pady=2)
     ui.tb.don = Button(ui.tb, text=cfg['done'], command=app.don)
     ui.tb.don.grid(row=1, column=2, padx=2, pady=2)
-    #ui.tb.und = Button(ui.tb, text=cfg['undone'], command=app.und)
-    #ui.tb.und.grid(row=1, column=3, padx=2, pady=2)
     ui.tb.urg = Button(ui.tb, text=cfg['urgent'], command=app.urg)
     ui.tb.urg.grid(row=1, column=3, padx=2, pady=2)
-    # listbox)
+    # listbox
     ui.lb = Listbox(ui, font=('Consolas', 10))
     ui.lb.pack(expand=True, fill='both')
     # statusbar
@@ -189,8 +187,7 @@ def drawUi(app, cfg):
     ui.bind("<n>", app.evtNew)
     ui.bind("<e>", app.evtEdi)
     ui.bind("<A>", app.evtArc)
-    ui.bind("<d>", app.evtDon)
-    #ui.bind("<u>", app.evtUnd)
+    ui.bind("<s>", app.evtDon)
     ui.bind("<u>", app.evtUrg)
     return(ui)
 
