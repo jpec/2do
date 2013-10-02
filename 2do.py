@@ -2,12 +2,29 @@
 # -*- coding: utf-8 -*-
 PROGRAM = "2do"
 VERSION = "v0.1"
+DOCHELP = """
+{0} {1}
+--
+This software is a simple todo list manager.
+It's written in Python using Tkinter and Sqlite.
+--
+Author: Julien Pecqueur
+Home: http://github.com/jpec/2do.py
+Email: jpec@julienpecqueur.net
+License: GPL
+""".format(PROGRAM, VERSION)
+
+# If system is Window :
+SDBFILE = "Y:/todo.sqlite"
+# If system is Unix :
+#SDBFILE = "~/.todo.sqlite"
 
 # Strings
 cfg = dict()
 cfg['program'] = PROGRAM
 cfg['version'] = VERSION
-cfg['file'] = "~/todo.sqlite"
+cfg['file'] = SDBFILE
+cfg['help'] = DOCHELP
 cfg['new'] = "Nouvelle (n)"
 cfg['edi'] = "Editer (e)"
 cfg['del'] = "Archiver (A)"
@@ -26,14 +43,14 @@ cfg['newtaskok'] = "Tache {0} ajoutée."
 cfg['errorsaving'] = "Erreur survenue lors de l'enregistrement."
 cfg['taskdel'] = "Tache {0} archivée…"
 cfg['taskdon'] = "Tache {0} : bascule statut…"
-cfg['taskurgent'] = "Tache {0}: bascule urgence…"
+cfg['taskurgent'] = "Tache {0} : bascule urgence…"
 cfg['log'] = "> {0}"
 cfg['taskedit'] = "Tache {0} modifiée…"
 cfg['editask'] = "Modifier la tache…"
 cfg['editask2'] = "Nouveau nom pour la tache :"
 # SQL
 cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, active INT, done INT, urgent INT);"
-cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done) VALUES (\"{0}\", 1, 0, 0);"
+cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done, urgent) VALUES (\"{0}\", 1, 0, 0);"
 cfg['sqlArchive'] = "UPDATE tasks SET active = 0 WHERE id = {0};"
 cfg['sqlDone'] = "UPDATE tasks SET done = 1 WHERE id = {0};"
 cfg['sqlUnDone'] = "UPDATE tasks SET done = 0 WHERE id = {0};"
@@ -43,11 +60,13 @@ cfg['sqlEdit'] = "UPDATE tasks SET task = \"{0}\" WHERE id = {1} ;"
 cfg['sqlUrg'] = "UPDATE tasks SET urgent = 1 WHERE id = {0};"
 cfg['sqlLow'] = "UPDATE tasks SET urgent = 0 WHERE id = {0};"
 
+
 from sqlite3 import connect
 from os.path import isfile
 from os.path import expanduser
 from tkinter import *
 from tkinter.simpledialog import askstring
+from tkinter.messagebox import showinfo
 from tkinter.ttk import Button, Frame
 
 
@@ -56,6 +75,7 @@ def isNewDb(dbfile):
         return(False)
     else:
         return(True)
+
 
 def openDb(cfg):
     path = expanduser(cfg['file'])
@@ -69,11 +89,13 @@ def openDb(cfg):
     else:
         return(None)
 
+
 def createTables(db, cfg):
     sql = cfg['sqlCreate']
     db.execute(sql)
     db.commit()
     return(True)
+
 
 def addTask(db, cfg, task):
     sql = cfg['sqlAdd']
@@ -81,11 +103,13 @@ def addTask(db, cfg, task):
     db.commit()
     return(id)
 
+
 def archiveTask(db, cfg, id):
     sql = cfg['sqlArchive']
     db.execute(sql.format(id))
     db.commit()
     return(True)
+
 
 def doneTask(db, cfg, id):
     sql = cfg['sqlDone']
@@ -93,11 +117,13 @@ def doneTask(db, cfg, id):
     db.commit()
     return(True)
 
+
 def undoneTask(db, cfg, id):
     sql = cfg['sqlUnDone']
     db.execute(sql.format(id))
     db.commit()
     return(True)
+
 
 def urgentTask(db, cfg, id):
     sql = cfg['sqlUrg']
@@ -105,11 +131,13 @@ def urgentTask(db, cfg, id):
     db.commit()
     return(True)
 
+
 def lowTask(db, cfg, id):
     sql = cfg['sqlLow']
     db.execute(sql.format(id))
     db.commit()
     return(True)
+
 
 def editTask(db, cfg, id, new):
     sql = cfg['sqlEdit']
@@ -117,10 +145,12 @@ def editTask(db, cfg, id, new):
     db.commit()
     return(True)
 
+
 def getTasks(db, cfg, archives = False):
     sql = cfg['sqlGet']
     r = db.execute(sql)
     return(r.fetchall())
+
 
 def getTask(db, cfg, id):
     sql = cfg['sqlGet1']
@@ -128,18 +158,21 @@ def getTask(db, cfg, id):
     for id, task, active, done, urgent in r.fetchall():
         return(task)
 
+
 def isUrgent(db, cfg, id):
     sql = cfg['sqlGet1']
     r = db.execute(sql.format(id))
     for id, task, active, done, urgent in r.fetchall():
         return(int(urgent))
-    
+
+        
 def isDone(db, cfg, id):
     sql = cfg['sqlGet1']
     r = db.execute(sql.format(id))
     for id, task, active, done, urgent in r.fetchall():
         return(int(done))
-    
+
+        
 def load(app):
     l = getTasks(app.db, app.cfg)
     i = 0
@@ -158,6 +191,7 @@ def load(app):
         app.tasks[str(i)] = id
         i = i+1
     return(True)
+
 
 def drawUi(app, cfg):
     ui = Tk()
@@ -189,7 +223,9 @@ def drawUi(app, cfg):
     ui.bind("<A>", app.evtArc)
     ui.bind("<s>", app.evtDon)
     ui.bind("<u>", app.evtUrg)
+    ui.bind("<h>", app.evtHel)
     return(ui)
+
 
 class app(object):
 
@@ -206,13 +242,16 @@ class app(object):
             load(self)
             self.log(cfg['ready'])
             self.ui.lb.focus_set()
+            self.ui.lb.selection_set(END)
             self.ui.mainloop()
             self.db.close()
         else:
             print(cfg['errordb'])
 
+
     def evtNew(self, event):
         self.new()
+
 
     def new(self):
         self.log(cfg['newtask'])
@@ -224,9 +263,11 @@ class app(object):
                 self.reload()
             else:
                 self.log(cfg['errorsaving'])
+
                 
     def evtEdi(self, event):
         self.edi()
+
         
     def edi(self):
         ids = self.ui.lb.curselection()
@@ -240,8 +281,10 @@ class app(object):
                 self.log(cfg['taskedit'].format(id))
                 self.reload()
 
+
     def evtArc(self, event):
         self.arc()
+
 
     def arc(self):
         ids = self.ui.lb.curselection()
@@ -251,8 +294,10 @@ class app(object):
             self.log(cfg['taskdel'].format(id))
             self.reload()
 
+
     def evtDon(self, event):
         self.don()
+
 
     def don(self):
         ids = self.ui.lb.curselection()
@@ -263,10 +308,12 @@ class app(object):
             else:
                 doneTask(self.db, self.cfg, id)
             self.log(cfg['taskdon'].format(id))
-            self.reload()
+        self.reload()
             
+    
     def evtUrg(self, event):
         self.urg()
+
 
     def urg(self):
         ids = self.ui.lb.curselection()
@@ -277,18 +324,23 @@ class app(object):
             else:
                 urgentTask(self.db, self.cfg, id)
             self.log(cfg['taskurgent'].format(id))
-            self.reload()
-        
+        self.reload()
+            
+
     def reload(self):
         self.ui.lb.delete(0, END)
         self.tasks = dict()
         load(self)
         self.ui.lb.focus_set()
+        self.ui.lb.selection_set(END)
         return(True)
+
+    def evtHel(self, evt):
+        cfg = self.cfg
+        showinfo(cfg['program'], cfg['help'])
 
     def log(self, msg):
         self.ui.sb.log.configure(text=cfg['log'].format(msg))
 
 
 run = app(cfg)
-
