@@ -15,9 +15,9 @@ License: GPL
 """.format(PROGRAM, VERSION)
 
 # If system is Window :
-SDBFILE = "Y:/todo.sqlite"
+#SDBFILE = "Y:/todo.sqlite"
 # If system is Unix :
-#SDBFILE = "~/.todo.sqlite"
+SDBFILE = "~/.todo.sqlite"
 
 # Strings
 cfg = dict()
@@ -224,6 +224,9 @@ def drawUi(app, cfg):
     ui.bind("<s>", app.evtDon)
     ui.bind("<u>", app.evtUrg)
     ui.bind("<h>", app.evtHel)
+    ui.lb.bind("<Double-Button-1>", app.evtEdi)
+    ui.lb.bind("<Button-2>", app.evtUrg)
+    ui.lb.bind("<Double-Button-3>", app.evtDon)
     return(ui)
 
 
