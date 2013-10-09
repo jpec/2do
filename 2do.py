@@ -15,9 +15,9 @@ License: GPL
 """.format(PROGRAM, VERSION)
 
 # If system is Window :
-SDBFILE = "Y:/todo.sqlite"
+#SDBFILE = "Y:/todo.sqlite"
 # If system is Unix :
-#SDBFILE = "~/.todo.sqlite"
+SDBFILE = "~/.todo.sqlite"
 
 # Strings
 cfg = dict()
@@ -50,8 +50,10 @@ cfg['log'] = "> {0}"
 cfg['taskedit'] = "Tache {0} modifiée…"
 cfg['editask'] = "Modifier la tache…"
 cfg['editask2'] = "Nouveau nom pour la tache :"
-cfg['visArchive'] = "Affiche les archives…"
-cfg['visArchive2'] = "Masque les archives…"
+cfg['visArchive'] = "Les archives sont affichées…"
+cfg['visArchive2'] = "Les archives sont masquées…"
+cfg['arctask1'] = "Archiver…"
+cfg['arctask2'] = "Voulez vous archiver la tâche {0} ?"
 # SQL
 cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, active INT, done INT, urgent INT);"
 cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done, urgent) VALUES (\"{0}\", 1, 0, 0);"
@@ -73,6 +75,7 @@ from os.path import expanduser
 from tkinter import *
 from tkinter.simpledialog import askstring
 from tkinter.messagebox import showinfo
+from tkinter.messagebox import askyesno
 from tkinter.ttk import Button, Frame
 
 
@@ -333,11 +336,13 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            if isNotArchive(self.db, self.cfg, id):
+            if isNotArchive(self.db, self.cfg, id) and \
+               askyesno(cfg['arctask1'], cfg['arctask2'].format(id)):
                 archiveTask(self.db, self.cfg, id)
+                self.log(cfg['taskdel'].format(id))
             else:
                 unarchiveTask(self.db, self.cfg, id)
-            self.log(cfg['taskdel'].format(id))
+                self.log(cfg['taskdel'].format(id))
             self.reload(self.archives)
 
 
