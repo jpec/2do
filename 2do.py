@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 PROGRAM = "2do"
-VERSION = "v0.1"
+VERSION = "v1.0-beta"
 DOCHELP = """
 {0} {1}
 --
@@ -12,64 +12,25 @@ Author: Julien Pecqueur
 Home: http://github.com/jpec/2do.py
 Email: jpec@julienpecqueur.net
 License: GPL
+--
+Keyboard shortcuts:
+ <n> create new task
+ <e> edit task
+ <s> toggle status (done / todo)
+ <u> toggle urgent flag
+ <a> toggle archive (archive / unarchive)
+ <v> toggle view mode (view archive bin / view tasks)
+ <h> display help
 """.format(PROGRAM, VERSION)
 
 # If system is Window :
-#SDBFILE = "Y:/todo.sqlite"
+SDBFILE_NT = "Y:/todo.sqlite"
 # If system is Unix :
-SDBFILE = "~/.todo.sqlite"
-
-# Strings
-cfg = dict()
-cfg['program'] = PROGRAM
-cfg['version'] = VERSION
-cfg['file'] = SDBFILE
-cfg['help'] = DOCHELP
-cfg['new'] = "Nouvelle (n)"
-cfg['edi'] = "Editer (e)"
-cfg['del'] = "Archiver (a)"
-cfg['done'] = "Statut (s)"
-cfg['urgent'] = "Urgence (u)"
-cfg['view'] = "Corbeille (v)"
-cfg['view2'] = "Tâches (v)"
-cfg['newtask'] = "Nouvelle tache…"
-cfg['newtask2'] = "Entrez le nom de la nouvelle tache :"
-cfg['taskdone'] = "{0} (terminée)"
-cfg['tasknotdone'] = "{0}"
-cfg['title'] = "{0} {1}"
-cfg['loading'] = "Chargement taches…"
-cfg['errordb'] = "Cannot open DB."
-cfg['ready'] = "Application chargée…"
-cfg['newtask'] = "Ajout nouvelle tache…"
-cfg['newtaskok'] = "Tache {0} ajoutée."
-cfg['errorsaving'] = "Erreur survenue lors de l'enregistrement."
-cfg['taskdel'] = "Tache {0} : bascule archivage…"
-cfg['taskdon'] = "Tache {0} : bascule statut…"
-cfg['taskurgent'] = "Tache {0} : bascule urgence…"
-cfg['log'] = "> {0}"
-cfg['taskedit'] = "Tache {0} modifiée…"
-cfg['editask'] = "Modifier la tache…"
-cfg['editask2'] = "Nouveau nom pour la tache :"
-cfg['visArchive'] = "Les archives sont affichées…"
-cfg['visArchive2'] = "Les archives sont masquées…"
-cfg['arctask1'] = "Archiver…"
-cfg['arctask2'] = "Voulez vous archiver la tâche {0} ?"
-# SQL
-cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, active INT, done INT, urgent INT);"
-cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done, urgent) VALUES (\"{0}\", 1, 0, 0);"
-cfg['sqlArchive'] = "UPDATE tasks SET active = 0 WHERE id = {0};"
-cfg['sqlUnArchive'] = "UPDATE tasks SET active = 1 WHERE id = {0};"
-cfg['sqlDone'] = "UPDATE tasks SET done = 1 WHERE id = {0};"
-cfg['sqlUnDone'] = "UPDATE tasks SET done = 0 WHERE id = {0};"
-cfg['sqlGet'] = "SELECT id, task, active, done, urgent FROM tasks WHERE active = 1 ;"
-cfg['sqlGet2'] = "SELECT id, task, active, done, urgent FROM tasks WHERE active = 0 ;"
-cfg['sqlGet1'] = "SELECT id, task, active, done, urgent FROM tasks WHERE id = {0} ;"
-cfg['sqlEdit'] = "UPDATE tasks SET task = \"{0}\" WHERE id = {1} ;"
-cfg['sqlUrg'] = "UPDATE tasks SET urgent = 1 WHERE id = {0};"
-cfg['sqlLow'] = "UPDATE tasks SET urgent = 0 WHERE id = {0};"
+SDBFILE_UX = "~/.todo.sqlite"
 
 
 from sqlite3 import connect
+import os
 from os.path import isfile
 from os.path import expanduser
 from tkinter import *
@@ -78,6 +39,35 @@ from tkinter.messagebox import showinfo
 from tkinter.messagebox import askyesno
 from tkinter.ttk import Button, Frame
 
+
+def getCfg():
+    # Strings
+    cfg = dict()
+    cfg['program'] = PROGRAM
+    cfg['version'] = VERSION
+    if 'nt' == os.name:
+        cfg['file'] = SDBFILE_NT
+    else:
+        cfg['file'] = SDBFILE_UX
+    cfg['help'] = DOCHELP
+    cfg['taskdone'] = "{0} (terminée)"
+    cfg['tasknotdone'] = "{0}"
+    cfg['title'] = "{0} {1}"
+    cfg['log'] = "> {0}"
+    # SQL
+    cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, active INT, done INT, urgent INT);"
+    cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done, urgent) VALUES (\"{0}\", 1, 0, 0);"
+    cfg['sqlArchive'] = "UPDATE tasks SET active = 0 WHERE id = {0};"
+    cfg['sqlUnArchive'] = "UPDATE tasks SET active = 1 WHERE id = {0};"
+    cfg['sqlDone'] = "UPDATE tasks SET done = 1 WHERE id = {0};"
+    cfg['sqlUnDone'] = "UPDATE tasks SET done = 0 WHERE id = {0};"
+    cfg['sqlGet'] = "SELECT id, task, active, done, urgent FROM tasks WHERE active = 1 ;"
+    cfg['sqlGet2'] = "SELECT id, task, active, done, urgent FROM tasks WHERE active = 0 ;"
+    cfg['sqlGet1'] = "SELECT id, task, active, done, urgent FROM tasks WHERE id = {0} ;"
+    cfg['sqlEdit'] = "UPDATE tasks SET task = \"{0}\" WHERE id = {1} ;"
+    cfg['sqlUrg'] = "UPDATE tasks SET urgent = 1 WHERE id = {0};"
+    cfg['sqlLow'] = "UPDATE tasks SET urgent = 0 WHERE id = {0};"
+    return(cfg)
 
 def isNewDb(dbfile):
     if isfile(dbfile):
@@ -226,17 +216,17 @@ def drawUi(app, cfg):
     ui.tb = Frame(ui)
     ui.tb.pack(anchor='nw')
     # tools
-    ui.tb.new = Button(ui.tb, text=cfg['new'], command=app.new)
+    ui.tb.new = Button(ui.tb, text="New", width=8, command=app.new)
     ui.tb.new.grid(row=1, column=0, padx=2, pady=2)
-    ui.tb.edi = Button(ui.tb, text=cfg['edi'], command=app.edi)
+    ui.tb.edi = Button(ui.tb, text="Edit", width=8, command=app.edi)
     ui.tb.edi.grid(row=1, column=1, padx=2, pady=2)
-    ui.tb.arc = Button(ui.tb, text=cfg['del'], command=app.arc)
+    ui.tb.arc = Button(ui.tb, text="Archive", width=8, command=app.arc)
     ui.tb.arc.grid(row=1, column=5, padx=2, pady=2)
-    ui.tb.don = Button(ui.tb, text=cfg['done'], command=app.don)
+    ui.tb.don = Button(ui.tb, text="Status", width=8, command=app.don)
     ui.tb.don.grid(row=1, column=2, padx=2, pady=2)
-    ui.tb.urg = Button(ui.tb, text=cfg['urgent'], command=app.urg)
+    ui.tb.urg = Button(ui.tb, text="Urgent", width=8, command=app.urg)
     ui.tb.urg.grid(row=1, column=3, padx=2, pady=2)
-    ui.tb.vis = Button(ui.tb, text=cfg['view'], command=app.vis)
+    ui.tb.vis = Button(ui.tb, text="View bin", width=10, command=app.vis)
     ui.tb.vis.grid(row=1, column=6, padx=2, pady=2)
     # listbox
     ui.lb = Listbox(ui)
@@ -271,15 +261,16 @@ class app(object):
         if self.db:
             # launch app
             self.ui = drawUi(self, cfg)
-            self.log(cfg['loading'])
+            self.log("Loading data…")
             load(self, self.archives)
-            self.log(cfg['ready'])
+            self.log("Data loaded !")
             self.ui.lb.focus_set()
+            self.log("Press <h> to display help…")
             self.ui.lb.selection_set(END)
             self.ui.mainloop()
             self.db.close()
         else:
-            print(cfg['errordb'])
+            print("Database error !")
 
 
     def evtVis(self, event):
@@ -289,30 +280,42 @@ class app(object):
     def vis(self):
         if not self.archives:
             self.reload(True)
-            self.ui.tb.vis.configure(text=cfg['view2'])
+            self.ui.tb.vis.configure(text="View tasks")
+            self.ui.tb.new.configure(state=DISABLED)
+            self.ui.tb.edi.configure(state=DISABLED)
+            self.ui.tb.don.configure(state=DISABLED)
+            self.ui.tb.urg.configure(state=DISABLED)
+            self.log("Displaying the archives bin…")
         else:
             self.reload(False)
-            self.ui.tb.vis.configure(text=cfg['view'])
+            self.ui.tb.vis.configure(text="View bin")
+            self.ui.tb.new.configure(state=NORMAL)
+            self.ui.tb.edi.configure(state=NORMAL)
+            self.ui.tb.don.configure(state=NORMAL)
+            self.ui.tb.urg.configure(state=NORMAL)
+            self.log("Displaying the tasks…")
 
 
     def evtNew(self, event):
-        self.new()
+        if not self.archives:
+            self.new()
 
 
     def new(self):
-        self.log(cfg['newtask'])
-        task = askstring(cfg['newtask'], cfg['newtask2'])
+        self.log("Appending new task…")
+        task = askstring("New task ?", "Enter the new task :")
         if task:
             id = addTask(self.db, self.cfg, task)
             if id:
-                self.log(cfg['newtaskok'].format(id))
+                self.log("Task {0} added !".format(id))
                 self.reload(self.archives)
             else:
-                self.log(cfg['errorsaving'])
+                self.log("Cannot save the task !")
 
                 
     def evtEdi(self, event):
-        self.edi()
+        if not self.archives:
+            self.edi()
 
         
     def edi(self):
@@ -320,11 +323,11 @@ class app(object):
         for task in ids:
             id = self.tasks[task]
             old = getTask(self.db, self.cfg, id)
-            self.log(cfg['editask'])
-            new = askstring(cfg['editask'], cfg['editask2'], initialvalue=old)
+            self.log("Editing task {0}…".format(id))
+            new = askstring("Edit task ?", "Enter the new task :", initialvalue=old)
             if new:
                 editTask(self.db, self.cfg, id, new)
-                self.log(cfg['taskedit'].format(id))
+                self.log("Task {0} edited !".format(id))
                 self.reload(self.archives)
 
 
@@ -337,17 +340,18 @@ class app(object):
         for task in ids:
             id = self.tasks[task]
             if isNotArchive(self.db, self.cfg, id) and \
-               askyesno(cfg['arctask1'], cfg['arctask2'].format(id)):
+               askyesno("Archive ?", "Do yo want to archive task {0} ?".format(id)):
                 archiveTask(self.db, self.cfg, id)
-                self.log(cfg['taskdel'].format(id))
+                self.log("Task {0} archived !".format(id))
             else:
                 unarchiveTask(self.db, self.cfg, id)
-                self.log(cfg['taskdel'].format(id))
+                self.log("Task {0} un-archived !".format(id))
             self.reload(self.archives)
 
 
     def evtDon(self, event):
-        self.don()
+        if not self.archives:
+            self.don()
 
 
     def don(self):
@@ -356,14 +360,16 @@ class app(object):
             id = self.tasks[task]
             if isDone(self.db, self.cfg, id):
                 undoneTask(self.db, self.cfg, id)
+                self.log("Task {0} un-done !".format(id))
             else:
                 doneTask(self.db, self.cfg, id)
-            self.log(cfg['taskdon'].format(id))
+                self.log("Task {0} done !".format(id))
         self.reload(self.archives)
             
     
     def evtUrg(self, event):
-        self.urg()
+        if not self.archives:
+            self.urg()
 
 
     def urg(self):
@@ -372,9 +378,10 @@ class app(object):
             id = self.tasks[task]
             if isUrgent(self.db, self.cfg, id):
                 lowTask(self.db, self.cfg, id)
+                self.log("Task {0} is not urgent !".format(id))
             else:
                 urgentTask(self.db, self.cfg, id)
-            self.log(cfg['taskurgent'].format(id))
+                self.log("Task {0} is urgent !".format(id))
         self.reload(self.archives)
             
 
@@ -383,21 +390,21 @@ class app(object):
         self.tasks = dict()
         if archives:
             load(self, True)
-            self.log(cfg['visArchive'])
         else:
             load(self, False)
-            self.log(cfg['visArchive2'])
         self.archives = archives
         self.ui.lb.focus_set()
         self.ui.lb.selection_set(END)
         return(True)
 
+
     def evtHel(self, evt):
         cfg = self.cfg
         showinfo(cfg['program'], cfg['help'])
 
+
     def log(self, msg):
         self.ui.sb.log.configure(text=cfg['log'].format(msg))
 
-
+cfg = getCfg()
 run = app(cfg)
