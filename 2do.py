@@ -56,17 +56,17 @@ def getCfg():
     cfg['log'] = "> {0}"
     # SQL
     cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT, active INT, done INT, urgent INT);"
-    cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done, urgent) VALUES (\"{0}\", 1, 0, 0);"
-    cfg['sqlArchive'] = "UPDATE tasks SET active = 0 WHERE id = {0};"
-    cfg['sqlUnArchive'] = "UPDATE tasks SET active = 1 WHERE id = {0};"
-    cfg['sqlDone'] = "UPDATE tasks SET done = 1 WHERE id = {0};"
-    cfg['sqlUnDone'] = "UPDATE tasks SET done = 0 WHERE id = {0};"
+    cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done, urgent) VALUES (?, 1, 0, 0);"
+    cfg['sqlArchive'] = "UPDATE tasks SET active = 0 WHERE id = ? ;"
+    cfg['sqlUnArchive'] = "UPDATE tasks SET active = 1 WHERE id = ? ;"
+    cfg['sqlDone'] = "UPDATE tasks SET done = 1 WHERE id = ? ;"
+    cfg['sqlUnDone'] = "UPDATE tasks SET done = 0 WHERE id = ? ;"
     cfg['sqlGet'] = "SELECT id, task, active, done, urgent FROM tasks WHERE active = 1 ;"
     cfg['sqlGet2'] = "SELECT id, task, active, done, urgent FROM tasks WHERE active = 0 ;"
-    cfg['sqlGet1'] = "SELECT id, task, active, done, urgent FROM tasks WHERE id = {0} ;"
-    cfg['sqlEdit'] = "UPDATE tasks SET task = \"{0}\" WHERE id = {1} ;"
-    cfg['sqlUrg'] = "UPDATE tasks SET urgent = 1 WHERE id = {0};"
-    cfg['sqlLow'] = "UPDATE tasks SET urgent = 0 WHERE id = {0};"
+    cfg['sqlGet1'] = "SELECT id, task, active, done, urgent FROM tasks WHERE id = ? ;"
+    cfg['sqlEdit'] = "UPDATE tasks SET task = ? WHERE id = ? ;"
+    cfg['sqlUrg'] = "UPDATE tasks SET urgent = 1 WHERE id = ? ;"
+    cfg['sqlLow'] = "UPDATE tasks SET urgent = 0 WHERE id = ? ;"
     return(cfg)
 
 def isNewDb(dbfile):
@@ -98,56 +98,56 @@ def createTables(db, cfg):
 
 def addTask(db, cfg, task):
     sql = cfg['sqlAdd']
-    id = db.execute(sql.format(task.replace("\"", "'"))).lastrowid
+    id = db.execute(sql,(task, )).lastrowid
     db.commit()
     return(id)
 
 
 def archiveTask(db, cfg, id):
     sql = cfg['sqlArchive']
-    db.execute(sql.format(id))
+    db.execute(sql,(id, ))
     db.commit()
     return(True)
 
 
 def unarchiveTask(db, cfg, id):
     sql = cfg['sqlUnArchive']
-    db.execute(sql.format(id))
+    db.execute(sql,(id, ))
     db.commit()
     return(True)
 
 
 def doneTask(db, cfg, id):
     sql = cfg['sqlDone']
-    db.execute(sql.format(id))
+    db.execute(sql,(id, ))
     db.commit()
     return(True)
 
 
 def undoneTask(db, cfg, id):
     sql = cfg['sqlUnDone']
-    db.execute(sql.format(id))
+    db.execute(sql,(id, ))
     db.commit()
     return(True)
 
 
 def urgentTask(db, cfg, id):
     sql = cfg['sqlUrg']
-    db.execute(sql.format(id))
+    db.execute(sql,(id, ))
     db.commit()
     return(True)
 
 
 def lowTask(db, cfg, id):
     sql = cfg['sqlLow']
-    db.execute(sql.format(id))
+    db.execute(sql,(id, ))
     db.commit()
     return(True)
 
 
 def editTask(db, cfg, id, new):
     sql = cfg['sqlEdit']
-    id = db.execute(sql.format(new.replace("\"", "'"), id))
+    id = db.execute(sql,(new, id))
     db.commit()
     return(True)
 
@@ -163,28 +163,28 @@ def getTasks(db, cfg, archives):
 
 def getTask(db, cfg, id):
     sql = cfg['sqlGet1']
-    r = db.execute(sql.format(id))
+    r = db.execute(sql,(id, ))
     for id, task, active, done, urgent in r.fetchall():
         return(task)
 
 
 def isUrgent(db, cfg, id):
     sql = cfg['sqlGet1']
-    r = db.execute(sql.format(id))
+    r = db.execute(sql,(id, ))
     for id, task, active, done, urgent in r.fetchall():
         return(int(urgent))
 
         
 def isDone(db, cfg, id):
     sql = cfg['sqlGet1']
-    r = db.execute(sql.format(id))
+    r = db.execute(sql,(id, ))
     for id, task, active, done, urgent in r.fetchall():
         return(int(done))
 
 
 def isNotArchive(db, cfg, id):
     sql = cfg['sqlGet1']
-    r = db.execute(sql.format(id))
+    r = db.execute(sql,(id, ))
     for id, task, active, done, urgent in r.fetchall():
         return(int(active))
     
