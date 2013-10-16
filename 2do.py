@@ -229,7 +229,7 @@ def drawUi(app, cfg):
     ui.tb.vis = Button(ui.tb, text="View bin", width=10, command=app.vis)
     ui.tb.vis.grid(row=1, column=6, padx=2, pady=2)
     # listbox
-    ui.lb = Listbox(ui)
+    ui.lb = Listbox(ui, selectmode=EXTENDED)
     ui.lb.pack(expand=True, fill='both')
     # statusbar
     ui.sb = Frame(ui)
