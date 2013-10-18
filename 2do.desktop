@@ -1,0 +1,7 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=2do
+Exec=2do.py
+Icon=evolution-tasks
+Type=Application
+Categories=Office

@@ -1,4 +1,6 @@
 2do
 ===
 
-To do list
+This is a simple tasks manager.
+
+

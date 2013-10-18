@@ -204,7 +204,7 @@ def load(app, archives):
             app.ui.lb.itemconfig(i, fg='red')
         else:
             app.ui.lb.itemconfig(i, fg='black')
-        app.tasks[str(i)] = id
+        app.tasks[i] = id
         i = i+1
     return(True)
 
