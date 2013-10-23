@@ -93,7 +93,7 @@ def createTables(db):
 def addTask(db, task):
     "Add the task in the database"
     sql = "INSERT INTO tasks (task, active, done, urgent) VALUES (?, 1, 0, 0);"
-    id = db.execute(sql,(task, )).lastrowid
+    id = db.execute(sql, (task, )).lastrowid
     db.commit()
     return(id)
 
@@ -101,7 +101,7 @@ def addTask(db, task):
 def activeTask(db, id, active):
     "Set active flag for the task"
     sql = "UPDATE tasks SET active = ? WHERE id = ? ;"
-    db.execute(sql,(active, id))
+    db.execute(sql, (active, id))
     db.commit()
     return(True)
 
@@ -109,7 +109,7 @@ def activeTask(db, id, active):
 def doneTask(db, id, done):
     "Set done flag for the task"
     sql = "UPDATE tasks SET done = ? WHERE id = ? ;"
-    db.execute(sql,(done, id))
+    db.execute(sql, (done, id))
     db.commit()
     return(True)
 
@@ -125,7 +125,7 @@ def urgentTask(db, id, urgent):
 def editTask(db, id, new):
     "Update the task"
     sql = "UPDATE tasks SET task = ? WHERE id = ? ;"
-    id = db.execute(sql,(new, id))
+    id = db.execute(sql, (new, id))
     db.commit()
     return(True)
 
@@ -152,7 +152,7 @@ def getTaskInfos(db, id):
         t['done'] = int(done)
         t['urgent'] = int(urgent)
         return(t)
-    
+
 
 def getTask(db, id):
     "Get a task"
@@ -180,7 +180,7 @@ def isNotArchive(db, id):
 
 def load(app, archives):
     "Load the tasks list"
-    l = getTasks(app.db, app.archives)
+    l = getTasks(app.db, archives)
     i = 0
     for id, task, active, done, urgent in l:
         if int(done) > 0:
@@ -312,7 +312,7 @@ class app(object):
         self.log("Appending new task…")
         task = askstring("New task ?", "Enter the new task :")
         if task:
-            id = addTask(self.db, self.task)
+            id = addTask(self.db, task)
             if id:
                 self.log("Task {0} added !".format(id))
                 self.reload(self.archives)
@@ -331,11 +331,11 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            old = getTask(self.db, self.id)
+            old = getTask(self.db, id)
             self.log("Editing task {0}…".format(id))
             new = askstring("Edit task ?", "Enter the new task :", initialvalue=old)
             if new:
-                editTask(self.db, self.id, new)
+                editTask(self.db, id, new)
                 self.log("Task {0} edited !".format(id))
         self.reload(self.archives)
 
@@ -350,12 +350,12 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            if isNotArchive(self.db, self.id) and \
+            if isNotArchive(self.db, id) and \
                askyesno("Archive ?", "Do yo want to archive task {0} ?".format(id)):
-                activeTask(self.db, self.id, 0)
+                activeTask(self.db, id, 0)
                 self.log("Task {0} archived !".format(id))
             else:
-                activeTask(self.db, self.id, 1)
+                activeTask(self.db, id, 1)
                 self.log("Task {0} un-archived !".format(id))
         self.reload(self.archives)
 
@@ -371,11 +371,11 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            if isDone(self.db, self.id):
-                doneTask(self.db, self.id, 0)
+            if isDone(self.db, id):
+                doneTask(self.db, id, 0)
                 self.log("Task {0} un-done !".format(id))
             else:
-                doneTask(self.db, self.id, 1)
+                doneTask(self.db, id, 1)
                 self.log("Task {0} done !".format(id))
         self.reload(self.archives)
 
@@ -391,11 +391,11 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            if isUrgent(self.db, self.id):
-                urgentTask(self.db, self.id, 0)
+            if isUrgent(self.db, id):
+                urgentTask(self.db, id, 0)
                 self.log("Task {0} is not urgent !".format(id))
             else:
-                urgentTask(self.db, self.id, 1)
+                urgentTask(self.db, id, 1)
                 self.log("Task {0} is urgent !".format(id))
         self.reload(self.archives)
 
