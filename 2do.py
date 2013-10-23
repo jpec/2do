@@ -3,12 +3,6 @@
 
 PROGRAM = "2do"
 VERSION = "v1.0-beta"
-
-
-#---------------------------------------------------------------------
-# HELP
-#---------------------------------------------------------------------
-
 DOCHELP = """
 {0} {1}
 --
@@ -57,43 +51,6 @@ from tkinter.messagebox import askyesno
 from tkinter.ttk import Button, Frame
 
 
-def getCfg():
-    "Return settings dictionary"
-    # STRINGS
-    cfg = dict()
-    cfg['program'] = PROGRAM
-    cfg['version'] = VERSION
-    if 'nt' == uname:
-        cfg['file'] = SDBFILE_NT
-    else:
-        cfg['file'] = SDBFILE_UX
-    cfg['help'] = DOCHELP
-    cfg['taskdone'] = "{0} (terminée)"
-    cfg['tasknotdone'] = "{0}"
-    cfg['title'] = "{0} {1}"
-    cfg['log'] = "> {0}"
-    # SQL REQUESTS
-    cfg['sqlCreate'] = "CREATE TABLE tasks (id INTEGER PRIMARY KEY "\
-                       +"AUTOINCREMENT, task TEXT, active INT, "\
-                       +"done INT, urgent INT);"
-    cfg['sqlAdd'] = "INSERT INTO tasks (task, active, done, urgent) "\
-                    +"VALUES (?, 1, 0, 0);"
-    cfg['sqlArchive'] = "UPDATE tasks SET active = 0 WHERE id = ? ;"
-    cfg['sqlUnArchive'] = "UPDATE tasks SET active = 1 WHERE id = ? ;"
-    cfg['sqlDone'] = "UPDATE tasks SET done = 1 WHERE id = ? ;"
-    cfg['sqlUnDone'] = "UPDATE tasks SET done = 0 WHERE id = ? ;"
-    cfg['sqlGet'] = "SELECT id, task, active, done, urgent "\
-                    +"FROM tasks WHERE active = 1 ;"
-    cfg['sqlGet2'] = "SELECT id, task, active, done, urgent "\
-                     +"FROM tasks WHERE active = 0 ;"
-    cfg['sqlGet1'] = "SELECT id, task, active, done, urgent "\
-                     +"FROM tasks WHERE id = ? ;"
-    cfg['sqlEdit'] = "UPDATE tasks SET task = ? WHERE id = ? ;"
-    cfg['sqlUrg'] = "UPDATE tasks SET urgent = 1 WHERE id = ? ;"
-    cfg['sqlLow'] = "UPDATE tasks SET urgent = 0 WHERE id = ? ;"
-    return(cfg)
-
-
 def isNewDb(dbfile):
     "Return True if the database doesn't exist"
     if isfile(dbfile):
@@ -102,143 +59,134 @@ def isNewDb(dbfile):
         return(True)
 
 
-def openDb(cfg):
+def getDbFile():
+    "Return database file"
+    if 'nt' == uname:
+        return(SDBFILE_NT)
+    else:
+        return(SDBFILE_UX)
+
+
+def openDb():
     "Open the database"
-    path = expanduser(cfg['file'])
+    path = expanduser(getDbFile())
     print(path)
     new = isNewDb(path)
     db = connect(path)
     if not new:
         return(db)
-    elif new and createTables(db, cfg):
+    elif new and createTables(db):
         return(db)
     else:
         return(None)
 
 
-def createTables(db, cfg):
+def createTables(db):
     "Create the database's tables"
-    sql = cfg['sqlCreate']
+    sql = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, "\
+          +"task TEXT, active INT, done INT, urgent INT);"
     db.execute(sql)
     db.commit()
     return(True)
 
 
-def addTask(db, cfg, task):
+def addTask(db, task):
     "Add the task in the database"
-    sql = cfg['sqlAdd']
+    sql = "INSERT INTO tasks (task, active, done, urgent) VALUES (?, 1, 0, 0);"
     id = db.execute(sql,(task, )).lastrowid
     db.commit()
     return(id)
 
 
-def archiveTask(db, cfg, id):
-    "Set archive flag for the task"
-    sql = cfg['sqlArchive']
-    db.execute(sql,(id, ))
+def activeTask(db, id, active):
+    "Set active flag for the task"
+    sql = "UPDATE tasks SET active = ? WHERE id = ? ;"
+    db.execute(sql,(active, id))
     db.commit()
     return(True)
 
 
-def unarchiveTask(db, cfg, id):
-    "Unset archive flag for the task"
-    sql = cfg['sqlUnArchive']
-    db.execute(sql,(id, ))
-    db.commit()
-    return(True)
-
-
-def doneTask(db, cfg, id):
+def doneTask(db, id, done):
     "Set done flag for the task"
-    sql = cfg['sqlDone']
-    db.execute(sql,(id, ))
+    sql = "UPDATE tasks SET done = ? WHERE id = ? ;"
+    db.execute(sql,(done, id))
     db.commit()
     return(True)
 
 
-def undoneTask(db, cfg, id):
-    "Unset done flag for the task"
-    sql = cfg['sqlUnDone']
-    db.execute(sql,(id, ))
-    db.commit()
-    return(True)
-
-
-def urgentTask(db, cfg, id):
+def urgentTask(db, id, urgent):
     "Set urgent flag for the task"
-    sql = cfg['sqlUrg']
-    db.execute(sql,(id, ))
+    sql = "UPDATE tasks SET urgent = ? WHERE id = ? ;"
+    db.execute(sql,(urgent, id))
     db.commit()
     return(True)
 
 
-def lowTask(db, cfg, id):
-    "Unset urgent flag for the task"
-    sql = cfg['sqlLow']
-    db.execute(sql,(id, ))
-    db.commit()
-    return(True)
-
-
-def editTask(db, cfg, id, new):
+def editTask(db, id, new):
     "Update the task"
-    sql = cfg['sqlEdit']
+    sql = "UPDATE tasks SET task = ? WHERE id = ? ;"
     id = db.execute(sql,(new, id))
     db.commit()
     return(True)
 
 
-def getTasks(db, cfg, archives):
+def getTasks(db, archives):
     "Get the tasks list"
+    sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? ;"
     if archives:
-        sql = cfg['sqlGet2']
+        r = db.execute(sql, (0, ))
     else:
-        sql = cfg['sqlGet']
-    r = db.execute(sql)
+        r = db.execute(sql, (1, ))
     return(r.fetchall())
 
 
-def getTask(db, cfg, id):
+def getTaskInfos(db, id):
+    "Get task's infos"
+    sql = "SELECT id, task, active, done, urgent FROM tasks WHERE id = ? ;"
+    r = db.execute(sql, (id, ))
+    t = dict()
+    for id, task, active, done, urgent in r.fetchall():
+        t['id'] = id
+        t['task'] = task
+        t['active'] = int(active)
+        t['done'] = int(done)
+        t['urgent'] = int(urgent)
+        return(t)
+    
+
+def getTask(db, id):
     "Get a task"
-    sql = cfg['sqlGet1']
-    r = db.execute(sql,(id, ))
-    for id, task, active, done, urgent in r.fetchall():
-        return(task)
+    t = getTaskInfos(db, id)
+    return(t['task'])
 
 
-def isUrgent(db, cfg, id):
+def isUrgent(db, id):
     "Get urgent flag for the task"
-    sql = cfg['sqlGet1']
-    r = db.execute(sql,(id, ))
-    for id, task, active, done, urgent in r.fetchall():
-        return(int(urgent))
+    t = getTaskInfos(db, id)
+    return(t['urgent'])
 
 
-def isDone(db, cfg, id):
+def isDone(db, id):
     "Get done flag for the task"
-    sql = cfg['sqlGet1']
-    r = db.execute(sql,(id, ))
-    for id, task, active, done, urgent in r.fetchall():
-        return(int(done))
+    t = getTaskInfos(db, id)
+    return(t['done'])
 
 
-def isNotArchive(db, cfg, id):
+def isNotArchive(db, id):
     "Get the *active* flag for the task"
-    sql = cfg['sqlGet1']
-    r = db.execute(sql,(id, ))
-    for id, task, active, done, urgent in r.fetchall():
-        return(int(active))
+    t = getTaskInfos(db, id)
+    return(t['active'])
 
 
 def load(app, archives):
     "Load the tasks list"
-    l = getTasks(app.db, app.cfg, archives)
+    l = getTasks(app.db, app.archives)
     i = 0
     for id, task, active, done, urgent in l:
         if int(done) > 0:
-            lbl = cfg['taskdone'].format(task)
+            lbl = "{0} (done)".format(task)
         else:
-            lbl = cfg['tasknotdone'].format(task)
+            lbl = "{0}".format(task)
         app.ui.lb.insert(id, lbl)
         if int(done) > 0:
             app.ui.lb.itemconfig(i, fg='grey')
@@ -251,10 +199,10 @@ def load(app, archives):
     return(True)
 
 
-def drawUi(app, cfg):
+def drawUi(app):
     "Draw the UI"
     ui = Tk()
-    ui.title(cfg['title'].format(cfg['program'], cfg['version']))
+    ui.title("{0} {1}".format(app.program, app.version))
     # toolbar
     ui.tb = Frame(ui)
     ui.tb.pack(anchor='nw')
@@ -295,19 +243,20 @@ def drawUi(app, cfg):
 class app(object):
     "Classe app for 2do"
 
-    def __init__(self, cfg):
+    def __init__(self, program, version, dochelp):
         "Initialize the class"
-        # get configuration
-        self.cfg = cfg
         # open/create the database
-        self.db = openDb(cfg)
+        self.db = openDb()
         # init variables
+        self.program = program
+        self.version = version
+        self.dochelp = dochelp
         self.task = None
         self.tasks = dict()
         self.archives = None
         if self.db:
             # launch app
-            self.ui = drawUi(self, cfg)
+            self.ui = drawUi(self)
             self.log("Loading data…")
             # load tasks
             load(self, self.archives)
@@ -363,7 +312,7 @@ class app(object):
         self.log("Appending new task…")
         task = askstring("New task ?", "Enter the new task :")
         if task:
-            id = addTask(self.db, self.cfg, task)
+            id = addTask(self.db, self.task)
             if id:
                 self.log("Task {0} added !".format(id))
                 self.reload(self.archives)
@@ -382,11 +331,11 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            old = getTask(self.db, self.cfg, id)
+            old = getTask(self.db, self.id)
             self.log("Editing task {0}…".format(id))
             new = askstring("Edit task ?", "Enter the new task :", initialvalue=old)
             if new:
-                editTask(self.db, self.cfg, id, new)
+                editTask(self.db, self.id, new)
                 self.log("Task {0} edited !".format(id))
         self.reload(self.archives)
 
@@ -401,12 +350,12 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            if isNotArchive(self.db, self.cfg, id) and \
+            if isNotArchive(self.db, self.id) and \
                askyesno("Archive ?", "Do yo want to archive task {0} ?".format(id)):
-                archiveTask(self.db, self.cfg, id)
+                activeTask(self.db, self.id, 0)
                 self.log("Task {0} archived !".format(id))
             else:
-                unarchiveTask(self.db, self.cfg, id)
+                activeTask(self.db, self.id, 1)
                 self.log("Task {0} un-archived !".format(id))
         self.reload(self.archives)
 
@@ -422,11 +371,11 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            if isDone(self.db, self.cfg, id):
-                undoneTask(self.db, self.cfg, id)
+            if isDone(self.db, self.id):
+                doneTask(self.db, self.id, 0)
                 self.log("Task {0} un-done !".format(id))
             else:
-                doneTask(self.db, self.cfg, id)
+                doneTask(self.db, self.id, 1)
                 self.log("Task {0} done !".format(id))
         self.reload(self.archives)
 
@@ -442,11 +391,11 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[task]
-            if isUrgent(self.db, self.cfg, id):
-                lowTask(self.db, self.cfg, id)
+            if isUrgent(self.db, self.id):
+                urgentTask(self.db, self.id, 0)
                 self.log("Task {0} is not urgent !".format(id))
             else:
-                urgentTask(self.db, self.cfg, id)
+                urgentTask(self.db, self.id, 1)
                 self.log("Task {0} is urgent !".format(id))
         self.reload(self.archives)
 
@@ -467,16 +416,15 @@ class app(object):
 
     def evtHel(self, evt):
         "Event display help"
-        cfg = self.cfg
-        showinfo(cfg['program'], cfg['help'])
+        t = "{0} {1}".format(self.program, self.version)
+        showinfo(t, self.dochelp)
 
 
     def log(self, msg):
         "Display log in status bar"
-        self.ui.sb.log.configure(text=cfg['log'].format(msg))
+        self.ui.sb.log.configure(text="> {0}".format(msg))
 
 
 if __name__ == '__main__':
     # start the program
-    cfg = getCfg()
-    run = app(cfg)
+    run = app(PROGRAM, VERSION, DOCHELP)
