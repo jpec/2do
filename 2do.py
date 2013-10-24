@@ -52,6 +52,7 @@ from tkinter.ttk import Button, Frame
 
 
 class app(object):
+
     "Classe app for 2do"
 
     def __init__(self, program, version, dochelp):
@@ -71,7 +72,7 @@ class app(object):
             self.log("Loading data…")
             # load tasks
             self.load(self.archives)
-            self.log("Data loaded !")
+            self.log("Data loaded !")
             self.ui.lb.focus_set()
             self.log("Press <h> to display help…")
             self.ui.lb.selection_set(END)
@@ -80,7 +81,7 @@ class app(object):
             # close database
             self.db.close()
         else:
-            print("Database error !")
+            print("Database error !")
 
 
     def evtVis(self, event):
@@ -128,7 +129,7 @@ class app(object):
                 self.log("Task {0} added !".format(id))
                 self.reload(self.archives)
             else:
-                self.log("Cannot save the task !")
+                self.log("Cannot save the task !")
 
 
     def evtEdi(self, event):
@@ -141,13 +142,13 @@ class app(object):
         "Edit task(s)"
         ids = self.ui.lb.curselection()
         for task in ids:
-            id = self.tasks[task]
+            id = self.tasks[str(task)]
             old = self.getTask(id)
             self.log("Editing task {0}…".format(id))
-            new = askstring("Edit task ?", "Enter the new task :", initialvalue=old)
+            new = askstring("Edit task ?", "Enter the new task :", initialvalue=old)
             if new:
                 self.editTask(id, new)
-                self.log("Task {0} edited !".format(id))
+                self.log("Task {0} edited !".format(id))
         self.reload(self.archives)
 
 
@@ -160,7 +161,7 @@ class app(object):
         "Toggle archive flag for task(s)"
         ids = self.ui.lb.curselection()
         for task in ids:
-            id = self.tasks[task]
+            id = self.tasks[str(task)]
             if self.isNotArchive(id) and \
                askyesno("Archive ?", "Do yo want to archive task {0} ?".format(id)):
                 self.activeTask(id, 0)
@@ -181,7 +182,7 @@ class app(object):
         "Toggle done flag for task(s)"
         ids = self.ui.lb.curselection()
         for task in ids:
-            id = self.tasks[task]
+            id = self.tasks[str(task)]
             if self.isDone(id):
                 self.doneTask(id, 0)
                 self.log("Task {0} un-done !".format(id))
@@ -201,7 +202,7 @@ class app(object):
         "Toggle urgent flag for task(s)"
         ids = self.ui.lb.curselection()
         for task in ids:
-            id = self.tasks[task]
+            id = self.tasks[str(task)]
             if self.isUrgent(id):
                 self.urgentTask(id, 0)
                 self.log("Task {0} is not urgent !".format(id))
@@ -379,7 +380,7 @@ class app(object):
                 self.ui.lb.itemconfig(i, fg='red')
             else:
                 self.ui.lb.itemconfig(i, fg='black')
-            self.tasks[i] = id
+            self.tasks[str(i)] = id
             i = i+1
         return(True)
 
@@ -423,6 +424,7 @@ class app(object):
         ui.lb.bind("<Button-2>", self.evtUrg)
         ui.lb.bind("<Double-Button-3>", self.evtDon)
         return(ui)
+
 
 
 if __name__ == '__main__':
