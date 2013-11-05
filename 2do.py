@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 PROGRAM = "2do"
-VERSION = "v1.0-beta"
+VERSION = "v1.0-rc1"
 DOCHELP = """
 {0} {1}
 --
@@ -30,7 +30,7 @@ Keyboard shortcuts:
 #---------------------------------------------------------------------
 
 # If system is Window :
-SDBFILE_NT = "Y:/todo.sqlite"
+SDBFILE_NT = "C:/todo.sqlite"
 
 # If system is Unix :
 SDBFILE_UX = "~/.todo.sqlite"
@@ -149,7 +149,7 @@ class app(object):
             if new:
                 self.editTask(id, new)
                 self.log("Task {0} edited !".format(id))
-        self.reload(self.archives)
+        self.reload(self.archives, ids)
 
 
     def evtArc(self, event):
@@ -169,7 +169,7 @@ class app(object):
             else:
                 self.activeTask(id, 1)
                 self.log("Task {0} un-archived !".format(id))
-        self.reload(self.archives)
+        self.reload(self.archives, ids)
 
 
     def evtDon(self, event):
@@ -189,7 +189,7 @@ class app(object):
             else:
                 self.doneTask(id, 1)
                 self.log("Task {0} done !".format(id))
-        self.reload(self.archives)
+        self.reload(self.archives, ids)
 
 
     def evtUrg(self, event):
@@ -209,10 +209,10 @@ class app(object):
             else:
                 self.urgentTask(id, 1)
                 self.log("Task {0} is urgent !".format(id))
-        self.reload(self.archives)
+        self.reload(self.archives, ids)
 
 
-    def reload(self, archives=False):
+    def reload(self, archives=False, selection=END):
         "Reload tasks/archives list"
         self.ui.lb.delete(0, END)
         self.tasks = dict()
@@ -222,7 +222,9 @@ class app(object):
             self.load(False)
         self.archives = archives
         self.ui.lb.focus_set()
-        self.ui.lb.selection_set(END)
+        if len(selection) > 1 and selection != END:
+            selection = selection[-1:]
+        self.ui.lb.selection_set(selection)
         return(True)
 
 
