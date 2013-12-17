@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 PROGRAM = "2do"
-VERSION = "v1.0-rc1"
+VERSION = "v1.0-rc3"
 DOCHELP = """
 {0} {1}
 --
@@ -30,7 +30,7 @@ Keyboard shortcuts:
 #---------------------------------------------------------------------
 
 # If system is Window :
-SDBFILE_NT = "C:/todo.sqlite"
+SDBFILE_NT = "y:/todo.sqlite"
 
 # If system is Unix :
 SDBFILE_UX = "~/.todo.sqlite"
@@ -65,6 +65,7 @@ class app(object):
         self.dochelp = dochelp
         self.task = None
         self.tasks = dict()
+        self.sksat = dict()
         self.archives = None
         if self.db:
             # launch app
@@ -127,7 +128,7 @@ class app(object):
             id = self.addTask(task)
             if id:
                 self.log("Task {0} added !".format(id))
-                self.reload(self.archives)
+                self.reload(self.archives, task=id)
             else:
                 self.log("Cannot save the task !")
 
@@ -149,7 +150,7 @@ class app(object):
             if new:
                 self.editTask(id, new)
                 self.log("Task {0} edited !".format(id))
-        self.reload(self.archives, ids)
+        self.reload(self.archives, task=id)
 
 
     def evtArc(self, event):
@@ -162,14 +163,15 @@ class app(object):
         ids = self.ui.lb.curselection()
         for task in ids:
             id = self.tasks[str(task)]
+            lb = self.getTask(id)
             if self.isNotArchive(id) and \
-               askyesno("Archive ?", "Do yo want to archive task {0} ?".format(id)):
+               askyesno("Archive ?", "Do yo want to archive following task ?\n' {0} '".format(lb)):
                 self.activeTask(id, 0)
                 self.log("Task {0} archived !".format(id))
             else:
                 self.activeTask(id, 1)
                 self.log("Task {0} un-archived !".format(id))
-        self.reload(self.archives, ids)
+        self.reload(self.archives)
 
 
     def evtDon(self, event):
@@ -189,7 +191,7 @@ class app(object):
             else:
                 self.doneTask(id, 1)
                 self.log("Task {0} done !".format(id))
-        self.reload(self.archives, ids)
+        self.reload(self.archives, task=id)
 
 
     def evtUrg(self, event):
@@ -209,20 +211,23 @@ class app(object):
             else:
                 self.urgentTask(id, 1)
                 self.log("Task {0} is urgent !".format(id))
-        self.reload(self.archives, ids)
+        self.reload(self.archives, task=id)
 
 
-    def reload(self, archives=False, selection=END):
+    def reload(self, archives=False, selection=END, task=None):
         "Reload tasks/archives list"
         self.ui.lb.delete(0, END)
         self.tasks = dict()
+        self.sksat = dict()
         if archives:
             self.load(True)
         else:
             self.load(False)
         self.archives = archives
         self.ui.lb.focus_set()
-        if len(selection) > 1 and selection != END:
+        if task:
+            selection = self.sksat[task] 
+        elif len(selection) > 1 and selection != END:
             selection = selection[-1:]
         self.ui.lb.selection_set(selection)
         return(True)
@@ -320,10 +325,11 @@ class app(object):
 
     def getTasks(self, archives):
         "Get the tasks list"
-        sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? ;"
         if archives:
+            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ?;"
             r = self.db.execute(sql, (0, ))
         else:
+            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? ORDER BY task;"
             r = self.db.execute(sql, (1, ))
         return(r.fetchall())
 
@@ -371,8 +377,8 @@ class app(object):
         l = self.getTasks(archives)
         i = 0
         for id, task, active, done, urgent in l:
-            if int(done) > 0:
-                lbl = "{0} (done)".format(task)
+            if archives:
+                lbl = "[{0}] {1}".format(id, task)
             else:
                 lbl = "{0}".format(task)
             self.ui.lb.insert(id, lbl)
@@ -383,6 +389,7 @@ class app(object):
             else:
                 self.ui.lb.itemconfig(i, fg='black')
             self.tasks[str(i)] = id
+            self.sksat[id] = str(i)
             i = i+1
         return(True)
 
