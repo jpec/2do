@@ -30,7 +30,7 @@ Keyboard shortcuts:
 #---------------------------------------------------------------------
 
 # If system is Window :
-SDBFILE_NT = "y:/todo.sqlite"
+SDBFILE_NT = "c:/todo.sqlite"
 
 # If system is Unix :
 SDBFILE_UX = "~/.todo.sqlite"
