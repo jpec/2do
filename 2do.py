@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 PROGRAM = "2do"
-VERSION = "v1.0-rc3"
+VERSION = "v1.0"
 DOCHELP = """
 {0} {1}
 --
@@ -16,6 +16,7 @@ License: GPL
 --
 Keyboard shortcuts:
  <n> create new task
+ <c> copy task to a new task
  <e> edit task
  <s> toggle status (done / todo)
  <u> toggle urgent flag
@@ -98,6 +99,7 @@ class app(object):
             self.ui.tb.vis.configure(text="View tasks")
             self.ui.tb.arc.configure(text="Reactive")
             self.ui.tb.new.configure(state=DISABLED)
+            self.ui.tb.dup.configure(state=DISABLED)
             self.ui.tb.edi.configure(state=DISABLED)
             self.ui.tb.don.configure(state=DISABLED)
             self.ui.tb.urg.configure(state=DISABLED)
@@ -108,6 +110,7 @@ class app(object):
             self.ui.tb.vis.configure(text="View bin")
             self.ui.tb.arc.configure(text="Archive")
             self.ui.tb.new.configure(state=NORMAL)
+            self.ui.tb.dup.configure(state=NORMAL)
             self.ui.tb.edi.configure(state=NORMAL)
             self.ui.tb.don.configure(state=NORMAL)
             self.ui.tb.urg.configure(state=NORMAL)
@@ -120,10 +123,11 @@ class app(object):
             self.new()
 
 
-    def new(self):
+    def new(self, task=None):
         "Create a new task"
         self.log("Appending new task…")
-        task = askstring("New task ?", "Enter the new task :")
+        if not task:
+            task = askstring("New task ?", "Enter the new task :")
         if task:
             id = self.addTask(task)
             if id:
@@ -131,6 +135,36 @@ class app(object):
                 self.reload(self.archives, task=id)
             else:
                 self.log("Cannot save the task !")
+
+
+    def evtDup(self, event):
+        "Event duplicate a task"
+        if not self.archives:
+            self.dup()
+
+
+    def dup(self):
+        "Duplicate a task"
+        tasks = self.ui.lb.curselection()
+        for task in tasks:
+            id = self.tasks[str(task)]
+            old = self.getTaskInfos(id)            
+            self.log("Duplicating task {0}…".format(id))
+            self.new(old['task'])
+
+
+    def getTaskInfos(self, id):
+        "Get task's infos"
+        sql = "SELECT id, task, active, done, urgent FROM tasks WHERE id = ? ;"
+        r = self.db.execute(sql, (id, ))
+        t = dict()
+        for id, task, active, done, urgent in r.fetchall():
+            t['id'] = id
+            t['task'] = task
+            t['active'] = int(active)
+            t['done'] = int(done)
+            t['urgent'] = int(urgent)
+            return(t)
 
 
     def evtEdi(self, event):
@@ -329,7 +363,7 @@ class app(object):
             sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ?;"
             r = self.db.execute(sql, (0, ))
         else:
-            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? ORDER BY task;"
+            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? ORDER BY task, id;"
             r = self.db.execute(sql, (1, ))
         return(r.fetchall())
 
@@ -404,16 +438,18 @@ class app(object):
         # tools
         ui.tb.new = Button(ui.tb, text="New", width=8, command=self.new)
         ui.tb.new.grid(row=1, column=0, padx=2, pady=2)
+        ui.tb.dup = Button(ui.tb, text="Copy", width=8, command=self.dup)
+        ui.tb.dup.grid(row=1, column=1, padx=2, pady=2)
         ui.tb.edi = Button(ui.tb, text="Edit", width=8, command=self.edi)
-        ui.tb.edi.grid(row=1, column=1, padx=2, pady=2)
+        ui.tb.edi.grid(row=1, column=2, padx=2, pady=2)
         ui.tb.arc = Button(ui.tb, text="Archive", width=8, command=self.arc)
-        ui.tb.arc.grid(row=1, column=5, padx=2, pady=2)
+        ui.tb.arc.grid(row=1, column=6, padx=2, pady=2)
         ui.tb.don = Button(ui.tb, text="Status", width=8, command=self.don)
-        ui.tb.don.grid(row=1, column=2, padx=2, pady=2)
+        ui.tb.don.grid(row=1, column=3, padx=2, pady=2)
         ui.tb.urg = Button(ui.tb, text="Urgent", width=8, command=self.urg)
-        ui.tb.urg.grid(row=1, column=3, padx=2, pady=2)
+        ui.tb.urg.grid(row=1, column=4, padx=2, pady=2)
         ui.tb.vis = Button(ui.tb, text="View bin", width=10, command=self.vis)
-        ui.tb.vis.grid(row=1, column=6, padx=2, pady=2)
+        ui.tb.vis.grid(row=1, column=7, padx=2, pady=2)
         # listbox
         ui.lb = Listbox(ui, selectmode=EXTENDED)
         ui.lb.pack(expand=True, fill='both')
@@ -423,6 +459,7 @@ class app(object):
         ui.sb.log = Label(ui.sb)
         ui.sb.log.pack(expand=True, fill='both')
         ui.bind("<n>", self.evtNew)
+        ui.bind("<c>", self.evtDup)
         ui.bind("<e>", self.evtEdi)
         ui.bind("<a>", self.evtArc)
         ui.bind("<v>", self.evtVis)
