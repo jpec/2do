@@ -22,6 +22,7 @@ Keyboard shortcuts:
  <u> toggle urgent flag
  <a> toggle archive (archive / unarchive)
  <v> toggle view mode (view archive bin / view tasks)
+ <f> focur on search box (return to search)
  <h> display help
 """.format(PROGRAM, VERSION)
 
@@ -49,7 +50,7 @@ from tkinter import *
 from tkinter.simpledialog import askstring
 from tkinter.messagebox import showinfo
 from tkinter.messagebox import askyesno
-from tkinter.ttk import Button, Frame
+from tkinter.ttk import Button, Frame, Entry
 
 
 class app(object):
@@ -103,6 +104,7 @@ class app(object):
             self.ui.tb.edi.configure(state=DISABLED)
             self.ui.tb.don.configure(state=DISABLED)
             self.ui.tb.urg.configure(state=DISABLED)
+            self.ui.tb.src.configure(state=DISABLED)
             self.log("Displaying the archives bin…")
         else:
             # archives mode
@@ -114,8 +116,14 @@ class app(object):
             self.ui.tb.edi.configure(state=NORMAL)
             self.ui.tb.don.configure(state=NORMAL)
             self.ui.tb.urg.configure(state=NORMAL)
+            self.ui.tb.src.configure(state=NORMAL)
             self.log("Displaying the tasks…")
 
+
+    def evtDis(self, event):
+        "Focus on search box"
+        self.ui.tb.src.focus()
+        
 
     def evtNew(self, event):
         "Event create new task"
@@ -267,6 +275,22 @@ class app(object):
         return(True)
 
 
+    def evtSrc(self, evt):
+        "Event search"
+        self.src()
+
+
+    def src(self):
+        "Search tasks"
+        mask = self.mask.get()
+        if mask == "":
+            mask = "%"
+            self.mask.set(mask)
+        if not self.archives:
+            self.reload(False, END, None)
+            self.log("Only tasks matching '{0}' are displayed !".format(mask))
+
+
     def evtHel(self, evt):
         "Event display help"
         t = "{0} {1}".format(self.program, self.version)
@@ -357,14 +381,14 @@ class app(object):
         return(True)
 
 
-    def getTasks(self, archives):
+    def getTasks(self, archives, mask="%"):
         "Get the tasks list"
         if archives:
-            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ?;"
-            r = self.db.execute(sql, (0, ))
+            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? AND task LIKE ?;"
+            r = self.db.execute(sql, (0, mask))
         else:
-            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? ORDER BY task, id;"
-            r = self.db.execute(sql, (1, ))
+            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ?  AND task LIKE ? ORDER BY task, id;"
+            r = self.db.execute(sql, (1, mask))
         return(r.fetchall())
 
 
@@ -408,7 +432,7 @@ class app(object):
 
     def load(self, archives):
         "Load the tasks list"
-        l = self.getTasks(archives)
+        l = self.getTasks(archives, self.mask.get())
         i = 0
         for id, task, active, done, urgent in l:
             if archives:
@@ -443,13 +467,19 @@ class app(object):
         ui.tb.edi = Button(ui.tb, text="Edit", width=8, command=self.edi)
         ui.tb.edi.grid(row=1, column=2, padx=2, pady=2)
         ui.tb.arc = Button(ui.tb, text="Archive", width=8, command=self.arc)
-        ui.tb.arc.grid(row=1, column=6, padx=2, pady=2)
+        ui.tb.arc.grid(row=1, column=5, padx=2, pady=2)
         ui.tb.don = Button(ui.tb, text="Status", width=8, command=self.don)
         ui.tb.don.grid(row=1, column=3, padx=2, pady=2)
         ui.tb.urg = Button(ui.tb, text="Urgent", width=8, command=self.urg)
         ui.tb.urg.grid(row=1, column=4, padx=2, pady=2)
         ui.tb.vis = Button(ui.tb, text="View bin", width=10, command=self.vis)
-        ui.tb.vis.grid(row=1, column=7, padx=2, pady=2)
+        ui.tb.vis.grid(row=1, column=6, padx=2, pady=2)
+        ui.tb.lbl = Label(ui.tb, text="Search :", width=8)
+        ui.tb.lbl.grid(row=2, column=0, padx=2, pady=2)
+        self.mask = StringVar()
+        self.mask.set("%")
+        ui.tb.src = Entry(ui.tb, width=62, textvariable=self.mask)
+        ui.tb.src.grid(row=2, column=1, columnspan=6, padx=2, pady=2)
         # listbox
         ui.lb = Listbox(ui, selectmode=EXTENDED)
         ui.lb.pack(expand=True, fill='both')
@@ -458,14 +488,16 @@ class app(object):
         ui.sb.pack(anchor='sw')
         ui.sb.log = Label(ui.sb)
         ui.sb.log.pack(expand=True, fill='both')
-        ui.bind("<n>", self.evtNew)
-        ui.bind("<c>", self.evtDup)
-        ui.bind("<e>", self.evtEdi)
-        ui.bind("<a>", self.evtArc)
-        ui.bind("<v>", self.evtVis)
-        ui.bind("<s>", self.evtDon)
-        ui.bind("<u>", self.evtUrg)
-        ui.bind("<h>", self.evtHel)
+        ui.lb.bind("<n>", self.evtNew)
+        ui.lb.bind("<c>", self.evtDup)
+        ui.lb.bind("<e>", self.evtEdi)
+        ui.lb.bind("<a>", self.evtArc)
+        ui.lb.bind("<v>", self.evtVis)
+        ui.lb.bind("<s>", self.evtDon)
+        ui.lb.bind("<u>", self.evtUrg)
+        ui.lb.bind("<h>", self.evtHel)
+        ui.lb.bind("<f>", self.evtDis)
+        ui.tb.src.bind("<Return>", self.evtSrc)
         ui.lb.bind("<Double-Button-1>", self.evtEdi)
         ui.lb.bind("<Button-2>", self.evtUrg)
         ui.lb.bind("<Double-Button-3>", self.evtDon)
