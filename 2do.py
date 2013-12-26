@@ -474,7 +474,7 @@ class app(object):
         ui.tb.urg.grid(row=1, column=4, padx=2, pady=2)
         ui.tb.vis = Button(ui.tb, text="View bin", width=10, command=self.vis)
         ui.tb.vis.grid(row=1, column=6, padx=2, pady=2)
-        ui.tb.lbl = Label(ui.tb, text="Search :", width=8)
+        ui.tb.lbl = Label(ui.tb, text="Search", width=6)
         ui.tb.lbl.grid(row=2, column=0, padx=2, pady=2)
         self.mask = StringVar()
         self.mask.set("%")
