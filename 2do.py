@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 PROGRAM = "2do"
-VERSION = "v1.1"
+VERSION = "v1.1-dev"
 DOCHELP = """
 {0} {1}
 --
@@ -51,6 +51,7 @@ from tkinter.simpledialog import askstring
 from tkinter.messagebox import showinfo
 from tkinter.messagebox import askyesno
 from tkinter.ttk import Button, Frame, Entry
+
 
 
 class app(object):
@@ -388,7 +389,7 @@ class app(object):
             sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? AND task LIKE ?;"
             r = self.db.execute(sql, (0, mask))
         else:
-            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ?  AND task LIKE ? ORDER BY task, id;"
+            sql = "SELECT id, task, active, done, urgent FROM tasks WHERE active = ? AND task LIKE ? ORDER BY task, id;"
             r = self.db.execute(sql, (1, mask))
         return(r.fetchall())
 
