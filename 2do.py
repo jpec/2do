@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 PROGRAM = "2do"
-VERSION = "v1.0"
+VERSION = "v1.1"
 DOCHELP = """
 {0} {1}
 --
@@ -332,12 +332,13 @@ class app(object):
             return(None)
 
 
-    def createTables(self):
+    def createTables(self, db):
         "Create the database's tables"
         sql = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, "\
               +"task TEXT, active INT, done INT, urgent INT);"
-        self.db.execute(sql)
-        self.db.commit()
+        db.execute(sql)
+        db.commit()
+        self.db = db
         return(True)
 
 
