@@ -98,8 +98,8 @@ class app(object):
         if not self.archives:
             # tasks mode
             self.reload(True)
-            self.ui.tb.vis.configure(text="View tasks")
-            self.ui.tb.arc.configure(text="Reactive")
+            self.ui.tb.vis.configure(text="Tasks")
+            self.ui.tb.arc.configure(text="Restore")
             self.ui.tb.new.configure(state=DISABLED)
             self.ui.tb.dup.configure(state=DISABLED)
             self.ui.tb.edi.configure(state=DISABLED)
@@ -110,8 +110,8 @@ class app(object):
         else:
             # archives mode
             self.reload(False)
-            self.ui.tb.vis.configure(text="View bin")
-            self.ui.tb.arc.configure(text="Archive")
+            self.ui.tb.vis.configure(text="Trash")
+            self.ui.tb.arc.configure(text="Delete")
             self.ui.tb.new.configure(state=NORMAL)
             self.ui.tb.dup.configure(state=NORMAL)
             self.ui.tb.edi.configure(state=NORMAL)
@@ -208,7 +208,7 @@ class app(object):
             id = self.tasks[str(task)]
             lb = self.getTask(id)
             if self.isNotArchive(id) and \
-               askyesno("Archive ?", "Do yo want to archive following task ?\n' {0} '".format(lb)):
+               askyesno("Archive ?", "Do yo want to archive following task ?\n\"{0}\"".format(lb)):
                 self.activeTask(id, 0)
                 self.log("Task {0} archived !".format(id))
             else:
@@ -453,6 +453,14 @@ class app(object):
             i = i+1
         return(True)
 
+    
+    def getWidgetSize(self):
+        "Return the widget size"
+        if 'nt' == uname:
+            return(8)
+        else:
+            return(6)
+
 
     def drawUi(self):
         "Draw the UI"
@@ -462,32 +470,38 @@ class app(object):
         ui.tb = Frame(ui)
         ui.tb.pack(anchor='nw')
         # tools
-        ui.tb.new = Button(ui.tb, text="New", width=8, command=self.new)
+        w = self.getWidgetSize()
+        ui.tb.new = Button(ui.tb, text="New", width=w, command=self.new)
         ui.tb.new.grid(row=1, column=0, padx=2, pady=2)
-        ui.tb.dup = Button(ui.tb, text="Copy", width=8, command=self.dup)
+        ui.tb.dup = Button(ui.tb, text="Copy", width=w, command=self.dup)
         ui.tb.dup.grid(row=1, column=1, padx=2, pady=2)
-        ui.tb.edi = Button(ui.tb, text="Edit", width=8, command=self.edi)
+        ui.tb.edi = Button(ui.tb, text="Edit", width=w, command=self.edi)
         ui.tb.edi.grid(row=1, column=2, padx=2, pady=2)
-        ui.tb.arc = Button(ui.tb, text="Archive", width=8, command=self.arc)
+        ui.tb.arc = Button(ui.tb, text="Delete", width=w, command=self.arc)
         ui.tb.arc.grid(row=1, column=5, padx=2, pady=2)
-        ui.tb.don = Button(ui.tb, text="Status", width=8, command=self.don)
+        ui.tb.don = Button(ui.tb, text="Status", width=w, command=self.don)
         ui.tb.don.grid(row=1, column=3, padx=2, pady=2)
-        ui.tb.urg = Button(ui.tb, text="Urgent", width=8, command=self.urg)
+        ui.tb.urg = Button(ui.tb, text="Urgent", width=w, command=self.urg)
         ui.tb.urg.grid(row=1, column=4, padx=2, pady=2)
-        ui.tb.vis = Button(ui.tb, text="View bin", width=10, command=self.vis)
+        ui.tb.vis = Button(ui.tb, text="Trash", width=w, command=self.vis)
         ui.tb.vis.grid(row=1, column=6, padx=2, pady=2)
-        ui.tb.lbl = Label(ui.tb, text="Search", width=6)
+        ui.tb.lbl = Label(ui.tb, text="Filter", width=w)
         ui.tb.lbl.grid(row=2, column=0, padx=2, pady=2)
         self.mask = StringVar()
         self.mask.set("%")
-        ui.tb.src = Entry(ui.tb, width=62, textvariable=self.mask)
+        ui.tb.src = Entry(ui.tb, width=w*7+2*5-w, textvariable=self.mask)
         ui.tb.src.grid(row=2, column=1, columnspan=6, padx=2, pady=2)
         # listbox
-        ui.lb = Listbox(ui, selectmode=EXTENDED)
-        ui.lb.pack(expand=True, fill='both')
+        ui.cf = Frame(ui)
+        ui.cf.pack(anchor="center", expand=True, fill='both')
+        ui.sl = Scrollbar(ui.cf, orient=VERTICAL)
+        ui.lb = Listbox(ui.cf, selectmode=EXTENDED, yscrollcommand=ui.sl.set)
+        ui.sl.config(command=ui.lb.yview)
+        ui.sl.pack(side=RIGHT, fill=Y)
+        ui.lb.pack(side=LEFT, expand=True, fill='both')
         # statusbar
         ui.sb = Frame(ui)
-        ui.sb.pack(anchor='sw')
+        ui.sb.pack(anchor="sw")
         ui.sb.log = Label(ui.sb)
         ui.sb.log.pack(expand=True, fill='both')
         ui.lb.bind("<n>", self.evtNew)
