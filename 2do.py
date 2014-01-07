@@ -32,10 +32,10 @@ Keyboard shortcuts:
 #---------------------------------------------------------------------
 
 # If system is Window :
-SDBFILE_NT = "c:/todo.sqlite"
+SDBFILE_NT = "c:/tmp/2do.db"
 
 # If system is Unix :
-SDBFILE_UX = "~/.todo.sqlite"
+SDBFILE_UX = "~/.2do.db"
 
 
 #---------------------------------------------------------------------
@@ -441,7 +441,7 @@ class app(object):
                 lbl = "[{0}] {1}".format(id, task)
             else:
                 lbl = "{0}".format(task)
-            self.ui.lb.insert(id, lbl)
+            self.ui.lb.insert(i, lbl)
             if int(done) > 0:
                 self.ui.lb.itemconfig(i, fg='grey')
             elif int(urgent) > 0:
