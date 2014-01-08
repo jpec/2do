@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-PROGRAM = "2do"
-VERSION = "v1.1-dev"
+PROGRAM = "2do « TO DO list manager »"
+VERSION = "v1.1"
 DOCHELP = """
 {0} {1}
 --
@@ -14,16 +14,25 @@ Home: http://github.com/jpec/2do.py
 Email: jpec@julienpecqueur.net
 License: GPL
 --
-Keyboard shortcuts:
- <n> create new task
- <c> copy task to a new task
- <e> edit task
- <s> toggle status (done / todo)
- <u> toggle urgent flag
- <a> toggle archive (archive / unarchive)
- <v> toggle view mode (view archive bin / view tasks)
- <f> focur on search box (return to search)
- <h> display help
+Keyboard shortcuts on main window:
+ <n> New task
+ <c> Copy task
+ <e> Edit task
+ <s> toggle Status flag
+ <u> toggle Urgent flag
+ <d> Delete task
+ <t> view Trash
+ <f> Filter box
+ <h> Help
+
+Keyboard shortcuts in trash:
+ <t> view Tasks
+ <d> restore task
+
+Keyboard shortcuts in filter:
+ <Escape> close filter
+ <Return> apply filter
+
 """.format(PROGRAM, VERSION)
 
 
@@ -32,7 +41,7 @@ Keyboard shortcuts:
 #---------------------------------------------------------------------
 
 # If system is Window :
-SDBFILE_NT = "c:/tmp/2do.db"
+SDBFILE_NT = "~/2do.db"
 
 # If system is Unix :
 SDBFILE_UX = "~/.2do.db"
@@ -70,6 +79,7 @@ class app(object):
         self.tasks = dict()
         self.sksat = dict()
         self.archives = None
+        self.filter = False
         if self.db:
             # launch app
             self.ui = self.drawUi()
@@ -105,7 +115,7 @@ class app(object):
             self.ui.tb.edi.configure(state=DISABLED)
             self.ui.tb.don.configure(state=DISABLED)
             self.ui.tb.urg.configure(state=DISABLED)
-            self.ui.tb.src.configure(state=DISABLED)
+            self.ui.fb.src.configure(state=DISABLED)
             self.log("Displaying the archives bin…")
         else:
             # archives mode
@@ -117,13 +127,39 @@ class app(object):
             self.ui.tb.edi.configure(state=NORMAL)
             self.ui.tb.don.configure(state=NORMAL)
             self.ui.tb.urg.configure(state=NORMAL)
-            self.ui.tb.src.configure(state=NORMAL)
+            self.ui.fb.src.configure(state=NORMAL)
             self.log("Displaying the tasks…")
 
 
     def evtDis(self, event):
-        "Focus on search box"
-        self.ui.tb.src.focus()
+        "Event toggle display filter box"
+        if not self.filter:
+            self.dis(True)
+        elif self.filter and "%" == self.mask.get():
+            self.dis(False)
+        else:
+            self.ui.fb.src.focus()
+            
+
+    def evtMas(self, event):
+        "Event mask filter box"
+        self.dis(False)
+
+
+    def dis(self, display):
+        "Toggle filter box display"
+        if display:
+            self.ui.fb.config(height=0)
+            self.ui.fb.src.pack(side=LEFT,expand=True, fill=X, padx=2, pady=2)
+            self.filter = True
+            self.ui.fb.src.focus()
+        else:
+            self.ui.fb.src.pack_forget()
+            self.ui.fb.config(height=1)
+            self.mask.set("%")
+            self.src()
+            self.filter = False
+            self.ui.lb.focus()
         
 
     def evtNew(self, event):
@@ -289,7 +325,7 @@ class app(object):
             self.mask.set(mask)
         if not self.archives:
             self.reload(False, END, None)
-            self.log("Only tasks matching '{0}' are displayed !".format(mask))
+            self.log("Only tasks matching '{0}' are displayed !".format(mask))
 
 
     def evtHel(self, evt):
@@ -300,7 +336,7 @@ class app(object):
 
     def log(self, msg):
         "Display log in status bar"
-        self.ui.sb.log.configure(text="> {0}".format(msg))
+        self.ui.sb.log.configure(text="{0}".format(msg))
 
 
     def isNewDb(self, dbfile):
@@ -454,8 +490,8 @@ class app(object):
         return(True)
 
     
-    def getWidgetSize(self):
-        "Return the widget size"
+    def getButtonSize(self):
+        "Return the button size"
         if 'nt' == uname:
             return(8)
         else:
@@ -468,32 +504,32 @@ class app(object):
         ui.title("{0} {1}".format(self.program, self.version))
         # toolbar
         ui.tb = Frame(ui)
-        ui.tb.pack(anchor='nw')
+        ui.tb.pack(fill=X)
         # tools
-        w = self.getWidgetSize()
-        ui.tb.new = Button(ui.tb, text="New", width=w, command=self.new)
-        ui.tb.new.grid(row=1, column=0, padx=2, pady=2)
-        ui.tb.dup = Button(ui.tb, text="Copy", width=w, command=self.dup)
-        ui.tb.dup.grid(row=1, column=1, padx=2, pady=2)
-        ui.tb.edi = Button(ui.tb, text="Edit", width=w, command=self.edi)
-        ui.tb.edi.grid(row=1, column=2, padx=2, pady=2)
-        ui.tb.arc = Button(ui.tb, text="Delete", width=w, command=self.arc)
-        ui.tb.arc.grid(row=1, column=5, padx=2, pady=2)
-        ui.tb.don = Button(ui.tb, text="Status", width=w, command=self.don)
-        ui.tb.don.grid(row=1, column=3, padx=2, pady=2)
-        ui.tb.urg = Button(ui.tb, text="Urgent", width=w, command=self.urg)
-        ui.tb.urg.grid(row=1, column=4, padx=2, pady=2)
-        ui.tb.vis = Button(ui.tb, text="Trash", width=w, command=self.vis)
-        ui.tb.vis.grid(row=1, column=6, padx=2, pady=2)
-        ui.tb.lbl = Label(ui.tb, text="Filter", width=w)
-        ui.tb.lbl.grid(row=2, column=0, padx=2, pady=2)
+        wb = self.getButtonSize()
+        ui.tb.new = Button(ui.tb, text="New", width=wb, command=self.new)
+        ui.tb.new.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.dup = Button(ui.tb, text="Copy", width=wb, command=self.dup)
+        ui.tb.dup.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.edi = Button(ui.tb, text="Edit", width=wb, command=self.edi)
+        ui.tb.edi.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.don = Button(ui.tb, text="Status", width=wb, command=self.don)
+        ui.tb.don.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.urg = Button(ui.tb, text="Urgent", width=wb, command=self.urg)
+        ui.tb.urg.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.arc = Button(ui.tb, text="Delete", width=wb, command=self.arc)
+        ui.tb.arc.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.vis = Button(ui.tb, text="Trash", width=wb, command=self.vis)
+        ui.tb.vis.pack(side=LEFT, padx=2, pady=2)
+        # filterbar
+        ui.fb = Frame(ui)
+        ui.fb.pack(fill=X)
         self.mask = StringVar()
         self.mask.set("%")
-        ui.tb.src = Entry(ui.tb, width=w*7+2*5-w, textvariable=self.mask)
-        ui.tb.src.grid(row=2, column=1, columnspan=6, padx=2, pady=2)
+        ui.fb.src = Entry(ui.fb, textvariable=self.mask)
         # listbox
         ui.cf = Frame(ui)
-        ui.cf.pack(anchor="center", expand=True, fill='both')
+        ui.cf.pack(fill=BOTH, expand=True)
         ui.sl = Scrollbar(ui.cf, orient=VERTICAL)
         ui.lb = Listbox(ui.cf, selectmode=EXTENDED, yscrollcommand=ui.sl.set)
         ui.sl.config(command=ui.lb.yview)
@@ -501,19 +537,20 @@ class app(object):
         ui.lb.pack(side=LEFT, expand=True, fill='both')
         # statusbar
         ui.sb = Frame(ui)
-        ui.sb.pack(anchor="sw")
+        ui.sb.pack(fill=X)
         ui.sb.log = Label(ui.sb)
-        ui.sb.log.pack(expand=True, fill='both')
+        ui.sb.log.pack(expand=True, fill='both', padx=2, pady=2)
         ui.lb.bind("<n>", self.evtNew)
         ui.lb.bind("<c>", self.evtDup)
         ui.lb.bind("<e>", self.evtEdi)
-        ui.lb.bind("<a>", self.evtArc)
-        ui.lb.bind("<v>", self.evtVis)
+        ui.lb.bind("<d>", self.evtArc)
+        ui.lb.bind("<t>", self.evtVis)
         ui.lb.bind("<s>", self.evtDon)
         ui.lb.bind("<u>", self.evtUrg)
         ui.lb.bind("<h>", self.evtHel)
         ui.lb.bind("<f>", self.evtDis)
-        ui.tb.src.bind("<Return>", self.evtSrc)
+        ui.fb.src.bind("<Return>", self.evtSrc)
+        ui.fb.src.bind("<Escape>", self.evtMas)
         ui.lb.bind("<Double-Button-1>", self.evtEdi)
         ui.lb.bind("<Button-2>", self.evtUrg)
         ui.lb.bind("<Double-Button-3>", self.evtDon)
