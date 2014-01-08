@@ -16,11 +16,12 @@ License: GPL
 --
 Keyboard shortcuts on main window:
  <n> New task
- <c> Copy task
+ <d> Duplic task
+ <p> Paste as new task
  <e> Edit task
  <s> toggle Status flag
  <u> toggle Urgent flag
- <d> Delete task
+ <r> Delete task
  <t> view Trash
  <f> Filter box
  <h> Help
@@ -112,6 +113,7 @@ class app(object):
             self.ui.tb.arc.configure(text="Restore")
             self.ui.tb.new.configure(state=DISABLED)
             self.ui.tb.dup.configure(state=DISABLED)
+            self.ui.tb.pas.configure(state=DISABLED)
             self.ui.tb.edi.configure(state=DISABLED)
             self.ui.tb.don.configure(state=DISABLED)
             self.ui.tb.urg.configure(state=DISABLED)
@@ -121,9 +123,10 @@ class app(object):
             # archives mode
             self.reload(False)
             self.ui.tb.vis.configure(text="Trash")
-            self.ui.tb.arc.configure(text="Delete")
+            self.ui.tb.arc.configure(text="Remove")
             self.ui.tb.new.configure(state=NORMAL)
             self.ui.tb.dup.configure(state=NORMAL)
+            self.ui.tb.pas.configure(state=NORMAL)
             self.ui.tb.edi.configure(state=NORMAL)
             self.ui.tb.don.configure(state=NORMAL)
             self.ui.tb.urg.configure(state=NORMAL)
@@ -161,6 +164,20 @@ class app(object):
             self.filter = False
             self.ui.lb.focus()
         
+    
+    def evtPas(self, event):
+        "Event paste as new"
+        if not self.archives:
+            self.pas()
+
+    
+    def pas(self):
+        "Paste as new task"
+        task = ""
+        task = self.ui.clipboard_get()
+        if task != "":
+            self.new(task)
+
 
     def evtNew(self, event):
         "Event create new task"
@@ -493,7 +510,7 @@ class app(object):
     def getButtonSize(self):
         "Return the button size"
         if 'nt' == uname:
-            return(8)
+            return(7)
         else:
             return(6)
 
@@ -509,15 +526,17 @@ class app(object):
         wb = self.getButtonSize()
         ui.tb.new = Button(ui.tb, text="New", width=wb, command=self.new)
         ui.tb.new.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.dup = Button(ui.tb, text="Copy", width=wb, command=self.dup)
+        ui.tb.dup = Button(ui.tb, text="Duplic", width=wb, command=self.dup)
         ui.tb.dup.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.pas = Button(ui.tb, text="Paste", width=wb, command=self.pas)
+        ui.tb.pas.pack(side=LEFT, padx=2, pady=2)
         ui.tb.edi = Button(ui.tb, text="Edit", width=wb, command=self.edi)
         ui.tb.edi.pack(side=LEFT, padx=2, pady=2)
         ui.tb.don = Button(ui.tb, text="Status", width=wb, command=self.don)
         ui.tb.don.pack(side=LEFT, padx=2, pady=2)
         ui.tb.urg = Button(ui.tb, text="Urgent", width=wb, command=self.urg)
         ui.tb.urg.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.arc = Button(ui.tb, text="Delete", width=wb, command=self.arc)
+        ui.tb.arc = Button(ui.tb, text="Remove", width=wb, command=self.arc)
         ui.tb.arc.pack(side=LEFT, padx=2, pady=2)
         ui.tb.vis = Button(ui.tb, text="Trash", width=wb, command=self.vis)
         ui.tb.vis.pack(side=LEFT, padx=2, pady=2)
@@ -541,9 +560,10 @@ class app(object):
         ui.sb.log = Label(ui.sb)
         ui.sb.log.pack(expand=True, fill='both', padx=2, pady=2)
         ui.lb.bind("<n>", self.evtNew)
-        ui.lb.bind("<c>", self.evtDup)
+        ui.lb.bind("<d>", self.evtDup)
+        ui.lb.bind("<p>", self.evtPas)
         ui.lb.bind("<e>", self.evtEdi)
-        ui.lb.bind("<d>", self.evtArc)
+        ui.lb.bind("<r>", self.evtArc)
         ui.lb.bind("<t>", self.evtVis)
         ui.lb.bind("<s>", self.evtDon)
         ui.lb.bind("<u>", self.evtUrg)
@@ -555,7 +575,6 @@ class app(object):
         ui.lb.bind("<Button-2>", self.evtUrg)
         ui.lb.bind("<Double-Button-3>", self.evtDon)
         return(ui)
-
 
 
 if __name__ == '__main__':
