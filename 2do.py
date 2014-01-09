@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 PROGRAM = "2do « TO DO list manager »"
-VERSION = "v1.1"
+VERSION = "v1.2"
 DOCHELP = """
 {0} {1}
 --
@@ -16,8 +16,8 @@ License: GPL
 --
 Keyboard shortcuts on main window:
  <n> New task
- <d> Duplic task
- <p> Paste as new task
+ <c> Copy task
+ <p> Paste task
  <e> Edit task
  <s> toggle Status flag
  <u> toggle Urgent flag
@@ -112,7 +112,7 @@ class app(object):
             self.ui.tb.vis.configure(text="Tasks")
             self.ui.tb.arc.configure(text="Restore")
             self.ui.tb.new.configure(state=DISABLED)
-            self.ui.tb.dup.configure(state=DISABLED)
+            self.ui.tb.cop.configure(state=DISABLED)
             self.ui.tb.pas.configure(state=DISABLED)
             self.ui.tb.edi.configure(state=DISABLED)
             self.ui.tb.don.configure(state=DISABLED)
@@ -125,7 +125,7 @@ class app(object):
             self.ui.tb.vis.configure(text="Trash")
             self.ui.tb.arc.configure(text="Remove")
             self.ui.tb.new.configure(state=NORMAL)
-            self.ui.tb.dup.configure(state=NORMAL)
+            self.ui.tb.cop.configure(state=NORMAL)
             self.ui.tb.pas.configure(state=NORMAL)
             self.ui.tb.edi.configure(state=NORMAL)
             self.ui.tb.don.configure(state=NORMAL)
@@ -199,20 +199,20 @@ class app(object):
                 self.log("Cannot save the task !")
 
 
-    def evtDup(self, event):
-        "Event duplicate a task"
-        if not self.archives:
-            self.dup()
+    def evtCop(self, event):
+        "Event copy task"
+        self.cop()
 
 
-    def dup(self):
-        "Duplicate a task"
+    def cop(self):
+        "Copy task"
         tasks = self.ui.lb.curselection()
+        self.ui.clipboard_clear()
         for task in tasks:
             id = self.tasks[str(task)]
-            old = self.getTaskInfos(id)            
-            self.log("Duplicating task {0}…".format(id))
-            self.new(old['task'])
+            old = self.getTaskInfos(id)
+            self.ui.clipboard_append(old['task'])
+            self.log("Tesk {0} copied.".format(id))
 
 
     def getTaskInfos(self, id):
@@ -526,8 +526,8 @@ class app(object):
         wb = self.getButtonSize()
         ui.tb.new = Button(ui.tb, text="New", width=wb, command=self.new)
         ui.tb.new.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.dup = Button(ui.tb, text="Duplic", width=wb, command=self.dup)
-        ui.tb.dup.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.cop = Button(ui.tb, text="Copy", width=wb, command=self.cop)
+        ui.tb.cop.pack(side=LEFT, padx=2, pady=2)
         ui.tb.pas = Button(ui.tb, text="Paste", width=wb, command=self.pas)
         ui.tb.pas.pack(side=LEFT, padx=2, pady=2)
         ui.tb.edi = Button(ui.tb, text="Edit", width=wb, command=self.edi)
@@ -560,7 +560,7 @@ class app(object):
         ui.sb.log = Label(ui.sb)
         ui.sb.log.pack(expand=True, fill='both', padx=2, pady=2)
         ui.lb.bind("<n>", self.evtNew)
-        ui.lb.bind("<d>", self.evtDup)
+        ui.lb.bind("<c>", self.evtCop)
         ui.lb.bind("<p>", self.evtPas)
         ui.lb.bind("<e>", self.evtEdi)
         ui.lb.bind("<r>", self.evtArc)
