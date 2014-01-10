@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-PROGRAM = "2do « TO DO list manager »"
-VERSION = "v1.2"
+PROGRAM = "2do « TODO LIST MANAGER »"
+VERSION = "v1.3"
 DOCHELP = """
 {0} {1}
 --
@@ -25,6 +25,7 @@ Keyboard shortcuts on main window:
  <t> view Trash
  <f> Filter box
  <h> Help
+ <F5> Reload data (refresh)
 
 Keyboard shortcuts in trash:
  <t> view Tasks
@@ -99,10 +100,16 @@ class app(object):
             print("Database error !")
 
 
+    def evtF5(self, event):
+        "Event F5 - Reload"
+        self.log("Reloading data…")
+        self.reload(self.archives)
+        self.log("Data reloaded!")
+
     def evtVis(self, event):
         "Event toggle tasks/archive mode"
         self.vis()
-
+        
 
     def vis(self):
         "Toggle tasks/archives mode"
@@ -559,6 +566,7 @@ class app(object):
         ui.sb.pack(fill=X)
         ui.sb.log = Label(ui.sb)
         ui.sb.log.pack(expand=True, fill='both', padx=2, pady=2)
+        ui.bind("<F5>", self.evtF5)
         ui.lb.bind("<n>", self.evtNew)
         ui.lb.bind("<c>", self.evtCop)
         ui.lb.bind("<p>", self.evtPas)
