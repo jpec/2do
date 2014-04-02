@@ -1,8 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-PROGRAM = "2do task manager"
-VERSION = "v2.0-alpha"
+#---------------------------------------------------------------------
+# PARAM
+#---------------------------------------------------------------------
+
+# database file
+BASE = "TestBase"
+PATH = "~/"
+SDBFILE = "{0}/2do_{1}.db".format(PATH, BASE)
+
+# milestones
+F1 = "-dev"
+F2 = "-alfa"
+F3 = "-beta"
+F4 = "-rc"
+F5 = "-next"
+
+# teams
+ANA = "ANA"
+DEV = "DEV"
+Q_R = "Q/R"
+RE7 = "RE7"
+ARB = "ARB"
+
+
+#---------------------------------------------------------------------
+# PROGRAM
+#---------------------------------------------------------------------
+
+PROGRAM = "2do {}".format(BASE)
+VERSION = "v2.0-beta"
 DOCHELP = """
 {0} {1}
 --
@@ -38,32 +66,6 @@ Keyboard shortcuts in filter:
  <Return> apply filter
 
 """.format(PROGRAM, VERSION)
-
-# TAGs first level :
-F1 = "BUGS"
-F2 = "FEAT"
-F3 = "IDEA"
-F4 = "WONT"
-F5 = "POST"
-
-# TAGs second level :
-F6 = "DEV1"
-F7 = "DEV2"
-F8 = "DEV3"
-F9 = "DEV4"
-F0 = "DEV5"
-
-
-#---------------------------------------------------------------------
-# PATHS FOR DB FILE
-#---------------------------------------------------------------------
-
-# If system is Window :
-SDBFILE_NT = "c:/tmp/2do.db"
-
-# If system is Unix :
-SDBFILE_UX = "~/.2do.db"
-
 
 #---------------------------------------------------------------------
 # SOURCE CODE
@@ -110,9 +112,7 @@ class console(object):
                     res = cur.fetchall()
             except SqlError as e:
                 msg = "{0}".format(e.args[0])
-                #showerror("Erreur !", msg)
                 self.ui.term.insert(END ,"{0}\n".format(msg))
-        #self.ui.term.insert(END ,">>> {0}\n".format(sql))
         self.ui.term.see(END)
         if res:
             for l in res:
@@ -165,6 +165,7 @@ class app(object):
             self.ui.lb.focus_set()
             self.log("Press <h> to display help…")
             self.ui.lb.selection_set(END)
+            self.ui.lb.see(END)
             # loop
             self.ui.mainloop()
             # close database
@@ -203,17 +204,16 @@ class app(object):
             self.ui.tb.edi.configure(state=DISABLED)
             self.ui.tb.don.configure(state=DISABLED)
             self.ui.tb.urg.configure(state=DISABLED)
-            self.ui.fb.src.configure(state=DISABLED)
             self.ui.tg.tf1.configure(state=DISABLED)
             self.ui.tg.tf2.configure(state=DISABLED)
             self.ui.tg.tf3.configure(state=DISABLED)
             self.ui.tg.tf4.configure(state=DISABLED)
             self.ui.tg.tf5.configure(state=DISABLED)
-            self.ui.tg.tf6.configure(state=DISABLED)
-            self.ui.tg.tf7.configure(state=DISABLED)
-            self.ui.tg.tf8.configure(state=DISABLED)
-            self.ui.tg.tf9.configure(state=DISABLED)
-            self.ui.tg.tf0.configure(state=DISABLED)
+            self.ui.tg.tANA.configure(state=DISABLED)
+            self.ui.tg.tDEV.configure(state=DISABLED)
+            self.ui.tg.tQ_R.configure(state=DISABLED)
+            self.ui.tg.tRE7.configure(state=DISABLED)
+            self.ui.tg.tARB.configure(state=DISABLED)
             self.log("Displaying the archives bin…")
         else:
             # archives mode
@@ -226,49 +226,27 @@ class app(object):
             self.ui.tb.edi.configure(state=NORMAL)
             self.ui.tb.don.configure(state=NORMAL)
             self.ui.tb.urg.configure(state=NORMAL)
-            self.ui.fb.src.configure(state=NORMAL)
             self.ui.tg.tf1.configure(state=NORMAL)
             self.ui.tg.tf2.configure(state=NORMAL)
             self.ui.tg.tf3.configure(state=NORMAL)
             self.ui.tg.tf4.configure(state=NORMAL)
             self.ui.tg.tf5.configure(state=NORMAL)
-            self.ui.tg.tf6.configure(state=NORMAL)
-            self.ui.tg.tf7.configure(state=NORMAL)
-            self.ui.tg.tf8.configure(state=NORMAL)
-            self.ui.tg.tf9.configure(state=NORMAL)
-            self.ui.tg.tf0.configure(state=NORMAL)
+            self.ui.tg.tANA.configure(state=NORMAL)
+            self.ui.tg.tDEV.configure(state=NORMAL)
+            self.ui.tg.tQ_R.configure(state=NORMAL)
+            self.ui.tg.tRE7.configure(state=NORMAL)
+            self.ui.tg.tARB.configure(state=NORMAL)
             self.log("Displaying the tasks…")
 
 
     def evtDis(self, event):
         "Event toggle display filter box"
-        if not self.filter:
-            self.dis(True)
-        elif self.filter and "%" == self.mask.get():
-            self.dis(False)
-        else:
-            self.ui.fb.src.focus()
+        self.ui.fb.src.focus()
             
 
     def evtMas(self, event):
         "Event mask filter box"
-        self.dis(False)
-
-
-    def dis(self, display):
-        "Toggle filter box display"
-        if display:
-            self.ui.fb.config(height=0)
-            self.ui.fb.src.pack(side=LEFT,expand=True, fill=X, padx=2, pady=2)
-            self.filter = True
-            self.ui.fb.src.focus()
-        else:
-            self.ui.fb.src.pack_forget()
-            self.ui.fb.config(height=1)
-            self.mask.set("%")
-            self.src()
-            self.filter = False
-            self.ui.lb.focus()
+        self.ui.lb.focus()
         
     
     def evtPas(self, event):
@@ -282,7 +260,9 @@ class app(object):
         task = ""
         task = self.ui.clipboard_get()
         if task != "":
-            self.new(task)
+            for elt in task.split("\n"):
+                if len(elt) > 3:
+                    self.new(elt)
 
 
     def evtNew(self, event):
@@ -297,7 +277,7 @@ class app(object):
         if not task:
             task = askstring("New task ?", "Enter the new task :")
         if task:
-            id = self.addTask(task)
+            id = self.addTask(task, ANA)
             if id:
                 self.log("Task {0} added !".format(id))
                 self.reload(self.archives, task=id)
@@ -334,7 +314,8 @@ class app(object):
             id = self.tasks[str(task)]
             old = self.getTask(id)
             self.log("Editing task {0}…".format(id))
-            new = askstring("Edit task ?", "Enter the new task :", initialvalue=old)
+            new = askstring("Edit task ?", "Enter the new task :",
+                            initialvalue=old)
             if new:
                 self.editTask(id, new)
                 self.log("Task {0} edited !".format(id))
@@ -371,34 +352,34 @@ class app(object):
             self.tag('milestone', F5)
 
 
-    def evtF6(self, event):
+    def evtANA(self, event):
         "Event tag team 1"
         if not self.archives:
-            self.tag('team', F6)
+            self.tag('team', ANA)
 
 
-    def evtF7(self, event):
+    def evtDEV(self, event):
         "Event tag team 2"
         if not self.archives:
-            self.tag('team', F7)
+            self.tag('team', DEV)
 
 
-    def evtF8(self, event):
+    def evtQ_R(self, event):
         "Event tag team 3"
         if not self.archives:
-            self.tag('team', F8)
+            self.tag('team', Q_R)
 
 
-    def evtF9(self, event):
+    def evtRE7(self, event):
         "Event tag team 4"
         if not self.archives:
-            self.tag('team', F9)
+            self.tag('team', RE7)
 
 
-    def evtF0(self, event):
+    def evtARB(self, event):
         "Event tag team 5"
         if not self.archives:
-            self.tag('team', F0)
+            self.tag('team', ARB)
 
         
     def tag(self, tag, value):
@@ -409,7 +390,7 @@ class app(object):
             if self.tagTask(id, tag, value):
                 self.log("Task {0} tagged for {1} !".format(id, value))
             else:
-                self.log("Error happened when tagging {0} for {1} !".format(id, value))
+                self.log("Cannot tag {0} for {1} !".format(id, value))
         self.reload(self.archives, task=id)
         
         
@@ -425,7 +406,8 @@ class app(object):
             id = self.tasks[str(task)]
             lb = self.getTask(id)
             if self.isNotArchive(id) and \
-               askyesno("Archive ?", "Do yo want to archive following task ?\n\"{0}\"".format(lb)):
+               askyesno("Archive ?",
+                        "Do yo want to archive this task ?\n\"{0}\"".format(lb)):
                 self.activeTask(id, 0)
                 self.log("Task {0} archived !".format(id))
             else:
@@ -490,6 +472,7 @@ class app(object):
         elif len(selection) > 1 and selection != END:
             selection = selection[-1:]
         self.ui.lb.selection_set(selection)
+        self.ui.lb.see(selection)
         return(True)
 
 
@@ -504,9 +487,8 @@ class app(object):
         if mask == "":
             mask = "%"
             self.mask.set(mask)
-        if not self.archives:
-            self.reload(False, END, None)
-            self.log("Only tasks matching '{0}' are displayed !".format(mask))
+        self.reload(self.archives, END, None)
+        self.log("Only tasks matching '{0}' are displayed !".format(mask))
 
 
     def evtHel(self, evt):
@@ -528,17 +510,9 @@ class app(object):
             return(True)
 
 
-    def getDbFile(self):
-        "Return database file"
-        if 'nt' == uname:
-            return(SDBFILE_NT)
-        else:
-            return(SDBFILE_UX)
-
-
     def openDb(self):
         "Open the database"
-        path = expanduser(self.getDbFile())
+        path = expanduser(SDBFILE)
         print(path)
         new = self.isNewDb(path)
         db = connect(path)
@@ -552,18 +526,20 @@ class app(object):
 
     def createTables(self, db):
         "Create the database's tables"
-        sql = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, "\
-              +"task TEXT, milestone TEXT, active INT, done INT, urgent INT, team TEXT);"
+        sql = "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        sql += "task TEXT, milestone TEXT, active INT, done INT, "
+        sql += "urgent INT, team TEXT);"
         db.execute(sql)
         db.commit()
         self.db = db
         return(True)
 
 
-    def addTask(self, task):
+    def addTask(self, task, team):
         "Add the task in the database"
-        sql = "INSERT INTO tasks (task, milestone, team, active, done, urgent) VALUES (?, '', '', 1, 0, 0);"
-        id = self.db.execute(sql, (task, )).lastrowid
+        sql = "INSERT INTO tasks (task, milestone, team, active, done, urgent) "
+        sql += "VALUES (?, '', ?, 1, 0, 0);"
+        id = self.db.execute(sql, (task, team)).lastrowid
         self.db.commit()
         return(id)
 
@@ -616,12 +592,15 @@ class app(object):
     def getTasks(self, archives, mask="%"):
         "Get the tasks list"
         if archives:
-            sql = "SELECT id, task, milestone, active, done, urgent, team FROM tasks WHERE active = ? AND task LIKE ?;"
+            sql = "SELECT id, task, milestone, active, done, urgent, team "
+            sql += "FROM tasks "
+            sql += "WHERE active = ? AND task LIKE ?;"
             r = self.db.execute(sql, (0, mask))
         else:
-            sql  = "SELECT id, task, milestone, active, done, urgent, team "
+            sql = "SELECT id, task, milestone, active, done, urgent, team "
             sql += "FROM tasks "
-            sql += "WHERE active = ? AND ( task LIKE ? OR team LIKE ? OR milestone LIKE ? ) "
+            sql += "WHERE active = ? "
+            sql += "AND ( task LIKE ? OR team LIKE ? OR milestone LIKE ? ) "
             sql += "ORDER BY milestone, task, id;"
             r = self.db.execute(sql, (1, mask, mask, mask))
         return(r.fetchall())
@@ -629,7 +608,9 @@ class app(object):
 
     def getTaskInfos(self, id):
         "Get task's infos"
-        sql = "SELECT id, task, milestone, active, done, urgent FROM tasks WHERE id = ? ;"
+        sql = "SELECT id, task, milestone, active, done, urgent "
+        sql += "FROM tasks "
+        sql += "WHERE id = ? ;"
         r = self.db.execute(sql, (id, ))
         t = dict()
         for id, task, milestone, active, done, urgent in r.fetchall():
@@ -677,9 +658,9 @@ class app(object):
             else:
                 lbl = "[{0}] {1} ({2})".format(milestone, task, team)
             self.ui.lb.insert(i, lbl)
-            if int(done) > 0:
+            if int(done) > 0 or team == DEV:
                 self.ui.lb.itemconfig(i, fg='grey')
-            elif int(urgent) > 0:
+            elif int(urgent) > 0 or team == ANA:
                 self.ui.lb.itemconfig(i, fg='red')
             else:
                 self.ui.lb.itemconfig(i, fg='black')
@@ -739,22 +720,25 @@ class app(object):
         ui.tg.tf4.pack(side=LEFT, padx=2, pady=2)
         ui.tg.tf5 = Button(ui.tg, text=F5, width=wb, command=lambda:self.evtF5(None))
         ui.tg.tf5.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf6 = Button(ui.tg, text=F6, width=wb, command=lambda:self.evtF6(None))
-        ui.tg.tf6.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf7 = Button(ui.tg, text=F7, width=wb, command=lambda:self.evtF7(None))
-        ui.tg.tf7.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf8 = Button(ui.tg, text=F8, width=wb, command=lambda:self.evtF8(None))
-        ui.tg.tf8.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf9 = Button(ui.tg, text=F9, width=wb, command=lambda:self.evtF9(None))
-        ui.tg.tf9.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf0 = Button(ui.tg, text=F0, width=wb, command=lambda:self.evtF0(None))
-        ui.tg.tf0.pack(side=LEFT, padx=2, pady=2)
+        ui.tg.tANA = Button(ui.tg, text=ANA, width=wb, command=lambda:self.evtANA(None))
+        ui.tg.tANA.pack(side=LEFT, padx=2, pady=2)
+        ui.tg.tDEV = Button(ui.tg, text=DEV, width=wb, command=lambda:self.evtDEV(None))
+        ui.tg.tDEV.pack(side=LEFT, padx=2, pady=2)
+        ui.tg.tQ_R = Button(ui.tg, text=Q_R, width=wb, command=lambda:self.evtQ_R(None))
+        ui.tg.tQ_R.pack(side=LEFT, padx=2, pady=2)
+        ui.tg.tRE7 = Button(ui.tg, text=RE7, width=wb, command=lambda:self.evtRE7(None))
+        ui.tg.tRE7.pack(side=LEFT, padx=2, pady=2)
+        ui.tg.tARB = Button(ui.tg, text=ARB, width=wb, command=lambda:self.evtARB(None))
+        ui.tg.tARB.pack(side=LEFT, padx=2, pady=2)
         # filterbar
         ui.fb = Frame(ui)
         ui.fb.pack(fill=X)
         self.mask = StringVar()
         self.mask.set("%")
         ui.fb.src = Entry(ui.fb, textvariable=self.mask)
+        ui.fb.config(height=0)
+        ui.fb.src.pack(side=LEFT,expand=True, fill=X, padx=2, pady=2)
+        self.filter = True
         # listbox
         ui.cf = Frame(ui)
         ui.cf.pack(fill=BOTH, expand=True)
