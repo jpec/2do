@@ -658,12 +658,22 @@ class app(object):
             else:
                 lbl = "[{0}] {1} ({2})".format(milestone, task, team)
             self.ui.lb.insert(i, lbl)
-            if int(done) > 0 or team == DEV:
-                self.ui.lb.itemconfig(i, fg='grey')
-            elif int(urgent) > 0 or team == ANA:
-                self.ui.lb.itemconfig(i, fg='red')
+            if int(done) > 0:
+                self.ui.lb.itemconfig(i, fg='grey', bg='white')
+            elif int(urgent) > 0:
+                self.ui.lb.itemconfig(i, fg='white', bg='red')
+            elif team == ANA:
+                self.ui.lb.itemconfig(i, fg='red', bg='white')
+            elif team == RE7:
+                self.ui.lb.itemconfig(i, fg='darkgreen', bg='white')
+            elif team == DEV:
+                self.ui.lb.itemconfig(i, fg='blue', bg='white')
+            elif team == Q_R:
+                self.ui.lb.itemconfig(i, fg='orange', bg='white')
+            elif team == ARB:
+                self.ui.lb.itemconfig(i, fg='black', bg='white')
             else:
-                self.ui.lb.itemconfig(i, fg='black')
+                self.ui.lb.itemconfig(i, fg='black', bg='white')
             self.tasks[str(i)] = id
             self.sksat[id] = str(i)
             i = i+1
