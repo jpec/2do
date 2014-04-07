@@ -591,17 +591,14 @@ class app(object):
 
     def getTasks(self, archives, mask="%"):
         "Get the tasks list"
+        sql = "SELECT id, task, milestone, active, done, urgent, team "
+        sql += "FROM tasks "
+        sql += "WHERE active = ? "
+        sql += "AND ( task LIKE ? OR team LIKE ? OR milestone LIKE ? ) "
+        sql += "ORDER BY milestone, task, id;"
         if archives:
-            sql = "SELECT id, task, milestone, active, done, urgent, team "
-            sql += "FROM tasks "
-            sql += "WHERE active = ? AND task LIKE ?;"
-            r = self.db.execute(sql, (0, mask))
+            r = self.db.execute(sql, (0, mask, mask, mask))
         else:
-            sql = "SELECT id, task, milestone, active, done, urgent, team "
-            sql += "FROM tasks "
-            sql += "WHERE active = ? "
-            sql += "AND ( task LIKE ? OR team LIKE ? OR milestone LIKE ? ) "
-            sql += "ORDER BY milestone, task, id;"
             r = self.db.execute(sql, (1, mask, mask, mask))
         return(r.fetchall())
 
@@ -654,7 +651,7 @@ class app(object):
         i = 0
         for id, task, milestone, active, done, urgent, team in l:
             if archives:
-                lbl = "[{0}] {1}".format(id, task)
+                lbl = "[{0}] {1} ({2}) | id={3}".format(milestone, task, team, id)
             else:
                 lbl = "[{0}] {1} ({2})".format(milestone, task, team)
             self.ui.lb.insert(i, lbl)
@@ -697,23 +694,23 @@ class app(object):
         ui.tb.pack(fill=X)
         # tools
         wb = self.getButtonSize()
-        ui.tb.new = Button(ui.tb, text="New", width=wb, command=self.new)
+        ui.tb.new = Button(ui.tb, text="New", width=wb, command=lambda:self.evtNew(None))
         ui.tb.new.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.cop = Button(ui.tb, text="Copy", width=wb, command=self.cop)
+        ui.tb.cop = Button(ui.tb, text="Copy", width=wb, command=lambda:self.evtCop(None))
         ui.tb.cop.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.pas = Button(ui.tb, text="Paste", width=wb, command=self.pas)
+        ui.tb.pas = Button(ui.tb, text="Paste", width=wb, command=lambda:self.evtPas(None))
         ui.tb.pas.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.edi = Button(ui.tb, text="Edit", width=wb, command=self.edi)
+        ui.tb.edi = Button(ui.tb, text="Edit", width=wb, command=lambda:self.evtEdi(None))
         ui.tb.edi.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.don = Button(ui.tb, text="Status", width=wb, command=self.don)
+        ui.tb.don = Button(ui.tb, text="Status", width=wb, command=lambda:self.evtDon(None))
         ui.tb.don.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.urg = Button(ui.tb, text="Urgent", width=wb, command=self.urg)
+        ui.tb.urg = Button(ui.tb, text="Urgent", width=wb, command=lambda:self.evtUrg(None))
         ui.tb.urg.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.arc = Button(ui.tb, text="Remove", width=wb, command=self.arc)
+        ui.tb.arc = Button(ui.tb, text="Remove", width=wb, command=lambda:self.evtArc(None))
         ui.tb.arc.pack(side=LEFT, padx=2, pady=2)
         ui.tb.ref = Button(ui.tb, text="Refresh", width=wb, command=lambda:self.evtRef(None))
         ui.tb.ref.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.vis = Button(ui.tb, text="Trash", width=wb, command=self.vis)
+        ui.tb.vis = Button(ui.tb, text="Trash", width=wb, command=lambda:self.evtVis(None))
         ui.tb.vis.pack(side=RIGHT, padx=2, pady=2)
         ui.tb.cmd = Button(ui.tb, text="Console", width=wb, command=lambda:self.evtCon(None))
         ui.tb.cmd.pack(side=RIGHT, padx=2, pady=2)
