@@ -160,8 +160,12 @@ class app(object):
             self.ui = self.drawUi()
             self.log("Loading data…")
             # load tasks
-            self.load(self.archives)
-            self.log("Data loaded !")
+            try:
+                self.load(self.archives)
+                self.log("Data loaded !")
+            except ValueError:
+                self.log("Cannot load data !")
+                self.evtCon(None)
             self.ui.lb.focus_set()
             self.log("Press <h> to display help…")
             self.ui.lb.selection_set(END)
