@@ -6,23 +6,33 @@
 #---------------------------------------------------------------------
 
 # database file
-BASE = "TestBase"
+BASE = "default"
 PATH = "~/"
 SDBFILE = "{0}/2do_{1}.db".format(PATH, BASE)
 
 # milestones
-F1 = "-dev"
-F2 = "-alfa"
-F3 = "-beta"
-F4 = "-rc"
-F5 = "-next"
+M1 = "v1.0-rc1"
+M2 = "v1.0-rc2"
+M3 = "v1.0-rc3"
+M4 = "v1.0-rc4"
+M5 = "v1.0-rc5"
+M6 = "v1.0-rc6"
+M7 = "v1.0"
+M8 = "v1.0.1"
+M9 = "v1.1-dev"
+M0 = "NEXT"
 
 # teams
-ANA = "ANA"
-DEV = "DEV"
-Q_R = "Q/R"
-RE7 = "RE7"
-ARB = "ARB"
+T1 = "Joe"
+T2 = "Jack"
+T3 = "Julien"
+T4 = "Jean"
+T5 = "Jane"
+T6 = "Juliet"
+T7 = "Janet"
+T8 = "Josef"
+T9 = "Juno"
+T0 = "Judith"
 
 
 #---------------------------------------------------------------------
@@ -30,7 +40,7 @@ ARB = "ARB"
 #---------------------------------------------------------------------
 
 PROGRAM = "2do {}".format(BASE)
-VERSION = "v2.0-beta"
+VERSION = "v2.0"
 DOCHELP = """
 {0} {1}
 --
@@ -154,34 +164,12 @@ class to_do_app(object):
         sql += "    active INT, "
         sql += "    done INT, "
         sql += "    urgent INT, "
-        sql += "    team TEXT, "
-        sql += "    project TEXT "
+        sql += "    team TEXT "
         sql += ");"
-        db.execute(sql)
-        sql = "CREATE TABLE projects "
-        sql += "( "
-        sql += "    id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        sql += "    project TEXT "
-        sql += ") ;"
         db.execute(sql)
         db.commit()
         self.db = db
         return(True)
-
-
-    def db_get_projects_UNUSED(self, mask="%"):
-        "Get the list of projects"
-        sql = "SELECT project FROM projects WHERE project LIKE ? ;"
-        r = self.db.execute(sql, (mask, ))
-        return(r.fetchall())
-
-
-    def db_set_project(self, id, project):
-        "Set the project value for a task"
-        sql = "UPDATE tasks SET project = ? where id = ? ;"
-        self.db.execute(sql, (project, id))
-        self.db.commit()
-        return(project)
 
 
     def db_create_task(self, task, team):
@@ -207,29 +195,11 @@ class to_do_app(object):
             sql = "UPDATE tasks SET urgent = ? WHERE id = ? ;"
         elif tag == "task":
             sql = "UPDATE tasks SET task = ? WHERE id = ? ;"
-        elif tag == "project":
-            sql = "UPDATE tasks SET project = ? WHERE id = ? ;"
         else:
             return(False)
         self.db.execute(sql, (value, id))
         self.db.commit()
         return(True)
-    
-
-    def db_set_task_active_DEPRECATED(self, id, value):
-        return(self.db_set_task_property(id, "active", value))
-
-
-    def db_set_task_done_DEPRECATED(self, id, value):
-        return(self.db_set_task_property(id, "done", value))
-
-
-    def db_set_task_urgent_DEPRECATED(self, id, value):
-        return(self.db_set_task_property(id, "urgent", value))
-
-
-    def db_set_task_DEPRECATED(self, id, value):
-        return(self.db_set_task_property(id, "task", value))
 
 
     def db_get_tasks_list(self, archives, mask="%"):
@@ -241,8 +211,7 @@ class to_do_app(object):
         sql += "    active, "
         sql += "    done, "
         sql += "    urgent, "
-        sql += "    team, "
-        sql += "    project "
+        sql += "    team "
         sql += "FROM tasks "
         sql += "WHERE "
         sql += "    active = ? "
@@ -250,15 +219,24 @@ class to_do_app(object):
         sql += "    task LIKE ? "
         sql += "    OR team LIKE ? "
         sql += "    OR milestone LIKE ? "
-        sql += "    OR project LIKE ? "
         sql += ") "
         sql += "ORDER BY milestone, task, id "
         sql += ";"
         if archives:
-            r = self.db.execute(sql, (0, mask, mask, mask, mask))
+            r = self.db.execute(sql, (0, mask, mask, mask))
         else:
-            r = self.db.execute(sql, (1, mask, mask, mask, mask))
+            r = self.db.execute(sql, (1, mask, mask, mask))
         return(r.fetchall())
+
+
+    def task_create_task_from_task(self, id):
+        "Create a task duplicating an existing task"
+        task = self.task_get_task_details(id)
+        sql = "INSERT INTO tasks (task, milestone, team, active, done, urgent) "
+        sql += "VALUES (?, ?, ?, 1, 0, 0);"
+        new = self.db.execute(sql, (task['task'], task['milestone'], task['team'])).lastrowid
+        self.db.commit()
+        return(new)
 
 
     def task_get_task_details(self, id):
@@ -270,22 +248,22 @@ class to_do_app(object):
         sql += "    active, "
         sql += "    done, "
         sql += "    urgent, "
-        sql += "    project "
+        sql += "    team "
         sql += "FROM tasks "
         sql += "WHERE "
         sql += "    id = ? "
         sql += ";"
         r = self.db.execute(sql, (id, ))
         t = dict()
-        for id, task, milestone, active, done, urgent, project in r.fetchall():
-            print(id, task, milestone, active,done, urgent, project)
+        for id, task, milestone, active, done, urgent, team in r.fetchall():
+            print(id, task, milestone, active,done, urgent, team)
             t['id'] = id
             t['task'] = task
             t['milestone'] = milestone
             t['active'] = int(active)
             t['done'] = int(done)
             t['urgent'] = int(urgent)
-            t['project'] = project
+            t['team'] = team
             return(t)
 
 
@@ -313,20 +291,30 @@ class to_do_app(object):
             self.ui.tb.new.configure(state=DISABLED)
             self.ui.tb.cop.configure(state=DISABLED)
             self.ui.tb.pas.configure(state=DISABLED)
+            self.ui.tb.dup.configure(state=DISABLED)
             self.ui.tb.edi.configure(state=DISABLED)
-            self.ui.tb.pro.configure(state=DISABLED)
             self.ui.tb.don.configure(state=DISABLED)
             self.ui.tb.urg.configure(state=DISABLED)
-            self.ui.tg.tf1.configure(state=DISABLED)
-            self.ui.tg.tf2.configure(state=DISABLED)
-            self.ui.tg.tf3.configure(state=DISABLED)
-            self.ui.tg.tf4.configure(state=DISABLED)
-            self.ui.tg.tf5.configure(state=DISABLED)
-            self.ui.tg.tANA.configure(state=DISABLED)
-            self.ui.tg.tDEV.configure(state=DISABLED)
-            self.ui.tg.tQ_R.configure(state=DISABLED)
-            self.ui.tg.tRE7.configure(state=DISABLED)
-            self.ui.tg.tARB.configure(state=DISABLED)
+            self.ui.tg1.tm1.configure(state=DISABLED)
+            self.ui.tg1.tm2.configure(state=DISABLED)
+            self.ui.tg1.tm3.configure(state=DISABLED)
+            self.ui.tg1.tm4.configure(state=DISABLED)
+            self.ui.tg1.tm5.configure(state=DISABLED)
+            self.ui.tg1.tm6.configure(state=DISABLED)
+            self.ui.tg1.tm7.configure(state=DISABLED)
+            self.ui.tg1.tm8.configure(state=DISABLED)
+            self.ui.tg1.tm9.configure(state=DISABLED)
+            self.ui.tg1.tm0.configure(state=DISABLED)
+            self.ui.tg2.tt1.configure(state=DISABLED)
+            self.ui.tg2.tt2.configure(state=DISABLED)
+            self.ui.tg2.tt3.configure(state=DISABLED)
+            self.ui.tg2.tt4.configure(state=DISABLED)
+            self.ui.tg2.tt5.configure(state=DISABLED)
+            self.ui.tg2.tt6.configure(state=DISABLED)
+            self.ui.tg2.tt7.configure(state=DISABLED)
+            self.ui.tg2.tt8.configure(state=DISABLED)
+            self.ui.tg2.tt9.configure(state=DISABLED)
+            self.ui.tg2.tt0.configure(state=DISABLED)
             self.ui_display_log("Displaying the archives bin…")
         else:
             # archives mode
@@ -336,20 +324,30 @@ class to_do_app(object):
             self.ui.tb.new.configure(state=NORMAL)
             self.ui.tb.cop.configure(state=NORMAL)
             self.ui.tb.pas.configure(state=NORMAL)
+            self.ui.tb.dup.configure(state=NORMAL)
             self.ui.tb.edi.configure(state=NORMAL)
-            self.ui.tb.pro.configure(state=NORMAL)
             self.ui.tb.don.configure(state=NORMAL)
             self.ui.tb.urg.configure(state=NORMAL)
-            self.ui.tg.tf1.configure(state=NORMAL)
-            self.ui.tg.tf2.configure(state=NORMAL)
-            self.ui.tg.tf3.configure(state=NORMAL)
-            self.ui.tg.tf4.configure(state=NORMAL)
-            self.ui.tg.tf5.configure(state=NORMAL)
-            self.ui.tg.tANA.configure(state=NORMAL)
-            self.ui.tg.tDEV.configure(state=NORMAL)
-            self.ui.tg.tQ_R.configure(state=NORMAL)
-            self.ui.tg.tRE7.configure(state=NORMAL)
-            self.ui.tg.tARB.configure(state=NORMAL)
+            self.ui.tg1.tm1.configure(state=NORMAL)
+            self.ui.tg1.tm2.configure(state=NORMAL)
+            self.ui.tg1.tm3.configure(state=NORMAL)
+            self.ui.tg1.tm4.configure(state=NORMAL)
+            self.ui.tg1.tm5.configure(state=NORMAL)
+            self.ui.tg1.tm6.configure(state=NORMAL)
+            self.ui.tg1.tm7.configure(state=NORMAL)
+            self.ui.tg1.tm8.configure(state=NORMAL)
+            self.ui.tg1.tm9.configure(state=NORMAL)
+            self.ui.tg1.tm0.configure(state=NORMAL)
+            self.ui.tg2.tt1.configure(state=NORMAL)
+            self.ui.tg2.tt2.configure(state=NORMAL)
+            self.ui.tg2.tt3.configure(state=NORMAL)
+            self.ui.tg2.tt4.configure(state=NORMAL)
+            self.ui.tg2.tt5.configure(state=NORMAL)
+            self.ui.tg2.tt6.configure(state=NORMAL)
+            self.ui.tg2.tt7.configure(state=NORMAL)
+            self.ui.tg2.tt8.configure(state=NORMAL)
+            self.ui.tg2.tt9.configure(state=NORMAL)
+            self.ui.tg2.tt0.configure(state=NORMAL)
             self.ui_display_log("Displaying the tasks…")
 
 
@@ -370,6 +368,17 @@ class to_do_app(object):
             self.task_create()
 
 
+    def cb_duplicate_task(self, event=None):
+        "Event duplicate task"
+        tasks = self.ui.lb.curselection()
+        self.ui.clipboard_clear()
+        for task in tasks:
+            id = self.tasks[str(task)]
+            new = self.task_create_task_from_task(id)
+            self.ui_display_log("Task {0} duplicated in {1}.".format(id, new))
+        self.ui_reload_tasks_list(self.archives)
+
+
     def cb_copy_task(self, event=None):
         "Event copy task"
         tasks = self.ui.lb.curselection()
@@ -379,7 +388,7 @@ class to_do_app(object):
             # DEPRECATED :
             old = self.task_get_task_details(id)
             self.ui.clipboard_append(old['task'])
-            self.ui_display_log("Tesk {0} copied.".format(id))
+            self.ui_display_log("Task {0} copied.".format(id))
 
 
     def cb_edit_task(self, event=None):
@@ -393,7 +402,7 @@ class to_do_app(object):
                 new = askstring("Editing task…", "Enter the new task :\nPlease use the following format :\n 'N° - Details for the task'",
                                 initialvalue=old)
                 if new:
-                    self.db_set_task_DEPRECATED(id, new)
+                    self.db_set_task_property(id, "task", new)
                     self.ui_display_log("Task {0} edited !".format(id))
             self.ui_reload_tasks_list(self.archives, task=id)
 
@@ -401,81 +410,121 @@ class to_do_app(object):
     def cb_set_task_milestone1(self, event=None):
         "Event tag milestone 1"
         if not self.archives:
-            self.task_set_property('milestone', F1)
+            self.task_set_property('milestone', M1)
 
 
     def cb_set_task_milestone2(self, event=None):
         "Event tag milestone 2"
         if not self.archives:
-            self.task_set_property('milestone', F2)
+            self.task_set_property('milestone', M2)
 
 
     def cb_set_task_milestone3(self, event=None):
         "Event tag milestone 3"
         if not self.archives:
-            self.task_set_property('milestone', F3)
+            self.task_set_property('milestone', M3)
 
 
     def cb_set_task_milestone4(self, event=None):
         "Event tag milestone 4"
         if not self.archives:
-            self.task_set_property('milestone', F4)
+            self.task_set_property('milestone', M4)
 
 
     def cb_set_task_milestone5(self, event=None):
         "Event tag milestone 5"
         if not self.archives:
-            self.task_set_property('milestone', F5)
+            self.task_set_property('milestone', M5)
+
+
+    def cb_set_task_milestone6(self, event=None):
+        "Event tag milestone 6"
+        if not self.archives:
+            self.task_set_property('milestone', M6)
+
+
+    def cb_set_task_milestone7(self, event=None):
+        "Event tag milestone 7"
+        if not self.archives:
+            self.task_set_property('milestone', M7)
+
+
+    def cb_set_task_milestone8(self, event=None):
+        "Event tag milestone 8"
+        if not self.archives:
+            self.task_set_property('milestone', M8)
+
+
+    def cb_set_task_milestone9(self, event=None):
+        "Event tag milestone 9"
+        if not self.archives:
+            self.task_set_property('milestone', M9)
+
+
+    def cb_set_task_milestone0(self, event=None):
+        "Event tag milestone 0"
+        if not self.archives:
+            self.task_set_property('milestone', M0)
 
 
     def cb_set_task_team1(self, event=None):
         "Event tag team 1"
         if not self.archives:
-            self.task_set_property('team', ANA)
+            self.task_set_property('team', T1)
 
 
     def cb_set_task_team2(self, event=None):
         "Event tag team 2"
         if not self.archives:
-            self.task_set_property('team', DEV)
+            self.task_set_property('team', T2)
 
 
     def cb_set_task_team3(self, event=None):
         "Event tag team 3"
         if not self.archives:
-            self.task_set_property('team', Q_R)
+            self.task_set_property('team', T3)
 
 
     def cb_set_task_team4(self, event=None):
         "Event tag team 4"
         if not self.archives:
-            self.task_set_property('team', RE7)
+            self.task_set_property('team', T4)
 
 
     def cb_set_task_team5(self, event=None):
         "Event tag team 5"
         if not self.archives:
-            self.task_set_property('team', ARB)
+            self.task_set_property('team', T5)
 
 
-    def cb_set_task_project(self, event=None):
-        "Event set project"
-        ids = self.ui.lb.curselection()
-        first = None
-        for task in ids:
-            id = self.tasks[str(task)]
-            if not first:
-                first = id
-            self.ui_display_log("Setting project for task {0}…".format(id))
-            old = self.task_get_project(id)
-            new = None
-            while not new:
-                new = askstring("Editing task {0}".format(id), "Enter the new project :", initialvalue=old)
-            if new and self.db_set_project(id, new):
-                self.ui_display_log("Task {0} is attached to the {1} project !".format(id, new))
-            else:
-                self.ui_display_log("Cannot attach task {0} to the {1} project !".format(id, new))
-        self.ui_reload_tasks_list(self.archives, task=first)
+    def cb_set_task_team6(self, event=None):
+        "Event tag team 6"
+        if not self.archives:
+            self.task_set_property('team', T6)
+
+
+    def cb_set_task_team7(self, event=None):
+        "Event tag team 7"
+        if not self.archives:
+            self.task_set_property('team', T7)
+
+
+    def cb_set_task_team8(self, event=None):
+        "Event tag team 8"
+        if not self.archives:
+            self.task_set_property('team', T8)
+
+
+    def cb_set_task_team9(self, event=None):
+        "Event tag team 9"
+        if not self.archives:
+            self.task_set_property('team', T9)
+
+
+    def cb_set_task_team0(self, event=None):
+        "Event tag team 0"
+        if not self.archives:
+            self.task_set_property('team', T0)
 
         
     def cb_toggle_task_archive(self, event=None):
@@ -486,10 +535,10 @@ class to_do_app(object):
             lb = self.task_get_task(id)
             if self.task_is_archived(id) and \
                askyesno("Archive ?", "Do yo want to archive this task ?\n\"{0}\"".format(lb)):
-                self.db_set_task_active_DEPRECATED(id, 0)
+                self.db_set_task_property(id, "active", 0)
                 self.ui_display_log("Task {0} archived !".format(id))
             else:
-                self.db_set_task_active_DEPRECATED(id, 1)
+                self.db_set_task_property(id, "active", 1)
                 self.ui_display_log("Task {0} un-archived !".format(id))
         self.ui_reload_tasks_list(self.archives)
 
@@ -501,10 +550,10 @@ class to_do_app(object):
             for task in ids:
                 id = self.tasks[str(task)]
                 if self.task_is_done(id):
-                    self.db_set_task_done_DEPRECATED(id, 0)
+                    self.db_set_task_property(id, "done", 0)
                     self.ui_display_log("Task {0} un-done !".format(id))
                 else:
-                    self.db_set_task_done_DEPRECATED(id, 1)
+                    self.db_set_task_property(id, "done", 1)
                     self.ui_display_log("Task {0} done !".format(id))
             self.ui_reload_tasks_list(self.archives, task=id)
 
@@ -516,10 +565,10 @@ class to_do_app(object):
             for task in ids:
                 id = self.tasks[str(task)]
                 if self.task_is_urgent(id):
-                    self.db_set_task_urgent_DEPRECATED(id, 0)
+                    self.db_set_task_property(id, "urgent", 0)
                     self.ui_display_log("Task {0} is not urgent !".format(id))
                 else:
-                    self.db_set_task_urgent_DEPRECATED(id, 1)
+                    self.db_set_task_property(id, "urgent", 1)
                     self.ui_display_log("Task {0} is urgent !".format(id))
             self.ui_reload_tasks_list(self.archives, task=id)
 
@@ -566,19 +615,13 @@ class to_do_app(object):
         return(t['active'])
 
 
-    def task_get_project(self, id):
-        "Get the project of the task"
-        t = self.task_get_task_details(id)
-        return(t['project'])
-
-
     def task_create(self, task=None):
         "Create a new task"
         self.ui_display_log("Appending new task…")
         if not task:
             task = askstring("New task ?", "Enter the new task :\nPlease use the following format :\n 'N° - Details for the task'")
         if task:
-            id = self.db_create_task(task, ANA)
+            id = self.db_create_task(task, T1)
             if id:
                 self.ui_display_log("Task {0} added !".format(id))
                 self.ui_reload_tasks_list(self.archives, task=id)
@@ -622,25 +665,25 @@ class to_do_app(object):
         "Load the tasks list"
         l = self.db_get_tasks_list(archives, self.mask.get())
         i = 0
-        for id, task, milestone, active, done, urgent, team, project in l:
+        for id, task, milestone, active, done, urgent, team in l:
             if archives:
-                lbl = "[{0}] {1} - {2} ({3}) | id={4}".format(milestone, project, task, team, id)
+                lbl = "[{0}] {1} ({2}) | id={3}".format(milestone, task, team, id)
             else:
-                lbl = "[{0}] {1} - {2} ({3})".format(milestone, project, task, team)
+                lbl = "[{0}] {1} ({2})".format(milestone, task, team)
             self.ui.lb.insert(i, lbl)
             if int(done) > 0:
                 self.ui.lb.itemconfig(i, fg='grey', bg='white')
             elif int(urgent) > 0:
                 self.ui.lb.itemconfig(i, fg='white', bg='red')
-            elif team == ANA:
+            elif team == T1:
                 self.ui.lb.itemconfig(i, fg='red', bg='white')
-            elif team == RE7:
+            elif team == T4:
                 self.ui.lb.itemconfig(i, fg='darkgreen', bg='white')
-            elif team == DEV:
+            elif team == T2:
                 self.ui.lb.itemconfig(i, fg='blue', bg='white')
-            elif team == Q_R:
+            elif team == T3:
                 self.ui.lb.itemconfig(i, fg='orange', bg='white')
-            elif team == ARB:
+            elif team == T5:
                 self.ui.lb.itemconfig(i, fg='black', bg='white')
             else:
                 self.ui.lb.itemconfig(i, fg='black', bg='white')
@@ -655,14 +698,6 @@ class to_do_app(object):
         self.ui.sb.ui_display_log.configure(text="{0}".format(msg))
 
 
-    def ui_get_button_size(self):
-        "Return the button size"
-        if 'nt' == uname:
-            return(7)
-        else:
-            return(6)
-        
-
     def ui_draw_window(self):
         "Draw the UI"
         ui = Tk()
@@ -671,62 +706,82 @@ class to_do_app(object):
         ui.tb = Frame(ui)
         ui.tb.pack(fill=X)
         # tools
-        wb = self.ui_get_button_size()
-        ui.tb.new = Button(ui.tb, text="New", width=wb, command=self.cb_new_task)
+        ui.tb.new = Button(ui.tb, text="New", command=self.cb_new_task)
         ui.tb.new.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.cop = Button(ui.tb, text="Copy", width=wb, command=self.cb_copy_task)
+        ui.tb.cop = Button(ui.tb, text="Copy", command=self.cb_copy_task)
         ui.tb.cop.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.pas = Button(ui.tb, text="Paste", width=wb, command=self.cb_paste_task)
+        ui.tb.pas = Button(ui.tb, text="Paste", command=self.cb_paste_task)
         ui.tb.pas.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.edi = Button(ui.tb, text="Edit", width=wb, command=self.cb_edit_task)
+        ui.tb.dup = Button(ui.tb, text="Duplica", command=self.cb_duplicate_task)
+        ui.tb.dup.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.edi = Button(ui.tb, text="Edit", command=self.cb_edit_task)
         ui.tb.edi.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.pro = Button(ui.tb, text="Project", width=wb, command=self.cb_set_task_project)
-        ui.tb.pro.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.don = Button(ui.tb, text="Status", width=wb, command=self.cb_toggle_task_done)
+        ui.tb.don = Button(ui.tb, text="Status", command=self.cb_toggle_task_done)
         ui.tb.don.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.urg = Button(ui.tb, text="Urgent", width=wb, command=self.cb_toggle_task_urgent)
+        ui.tb.urg = Button(ui.tb, text="Urgent", command=self.cb_toggle_task_urgent)
         ui.tb.urg.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.arc = Button(ui.tb, text="Remove", width=wb, command=self.cb_toggle_task_archive)
+        ui.tb.arc = Button(ui.tb, text="Remove", command=self.cb_toggle_task_archive)
         ui.tb.arc.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.ref = Button(ui.tb, text="Refresh", width=wb, command=self.cb_refresh)
+        ui.tb.ref = Button(ui.tb, text="Refresh", command=self.cb_refresh)
         ui.tb.ref.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.vis = Button(ui.tb, text="Trash", width=wb, command=self.cb_toggle_display)
+        ui.tb.vis = Button(ui.tb, text="Trash", command=self.cb_toggle_display)
         ui.tb.vis.pack(side=RIGHT, padx=2, pady=2)
-        ui.tb.cmd = Button(ui.tb, text="Console", width=wb, command=self.cb_open_console)
+        ui.tb.cmd = Button(ui.tb, text="Console", command=self.cb_open_console)
         ui.tb.cmd.pack(side=RIGHT, padx=2, pady=2)
-        # tagbar
-        ui.tg = Frame(ui)
-        ui.tg.pack(fill=X)
-        ui.tg.tf1 = Button(ui.tg, text=F1, width=wb, command=self.cb_set_task_milestone1)
-        ui.tg.tf1.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf2 = Button(ui.tg, text=F2, width=wb, command=self.cb_set_task_milestone2)
-        ui.tg.tf2.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf3 = Button(ui.tg, text=F3, width=wb, command=self.cb_set_task_milestone3)
-        ui.tg.tf3.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf4 = Button(ui.tg, text=F4, width=wb, command=self.cb_set_task_milestone4)
-        ui.tg.tf4.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tf5 = Button(ui.tg, text=F5, width=wb, command=self.cb_set_task_milestone5)
-        ui.tg.tf5.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tANA = Button(ui.tg, text=ANA, width=wb, command=self.cb_set_task_team1)
-        ui.tg.tANA.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tDEV = Button(ui.tg, text=DEV, width=wb, command=self.cb_set_task_team2)
-        ui.tg.tDEV.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tQ_R = Button(ui.tg, text=Q_R, width=wb, command=self.cb_set_task_team3)
-        ui.tg.tQ_R.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tRE7 = Button(ui.tg, text=RE7, width=wb, command=self.cb_set_task_team4)
-        ui.tg.tRE7.pack(side=LEFT, padx=2, pady=2)
-        ui.tg.tARB = Button(ui.tg, text=ARB, width=wb, command=self.cb_set_task_team5)
-        ui.tg.tARB.pack(side=LEFT, padx=2, pady=2)
+        # tagbar 1
+        ui.tg1= Frame(ui)
+        ui.tg1.pack(fill=X)
+        ui.tg1.tm1 = Button(ui.tg1, text=M1, command=self.cb_set_task_milestone1)
+        ui.tg1.tm1.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm2 = Button(ui.tg1, text=M2, command=self.cb_set_task_milestone2)
+        ui.tg1.tm2.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm3 = Button(ui.tg1, text=M3, command=self.cb_set_task_milestone3)
+        ui.tg1.tm3.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm4 = Button(ui.tg1, text=M4, command=self.cb_set_task_milestone4)
+        ui.tg1.tm4.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm5 = Button(ui.tg1, text=M5, command=self.cb_set_task_milestone5)
+        ui.tg1.tm5.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm6 = Button(ui.tg1, text=M6, command=self.cb_set_task_milestone6)
+        ui.tg1.tm6.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm7 = Button(ui.tg1, text=M7, command=self.cb_set_task_milestone7)
+        ui.tg1.tm7.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm8 = Button(ui.tg1, text=M8, command=self.cb_set_task_milestone8)
+        ui.tg1.tm8.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm9 = Button(ui.tg1, text=M9, command=self.cb_set_task_milestone9)
+        ui.tg1.tm9.pack(side=LEFT, padx=2, pady=2)
+        ui.tg1.tm0 = Button(ui.tg1, text=M0, command=self.cb_set_task_milestone0)
+        ui.tg1.tm0.pack(side=LEFT, padx=2, pady=2)
+        # tagbar 2
+        ui.tg2 = Frame(ui)
+        ui.tg2.pack(fill=X)
+        ui.tg2.tt1 = Button(ui.tg2, text=T1, command=self.cb_set_task_team1)
+        ui.tg2.tt1.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt2 = Button(ui.tg2, text=T2, command=self.cb_set_task_team2)
+        ui.tg2.tt2.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt3 = Button(ui.tg2, text=T3, command=self.cb_set_task_team3)
+        ui.tg2.tt3.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt4 = Button(ui.tg2, text=T4, command=self.cb_set_task_team4)
+        ui.tg2.tt4.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt5 = Button(ui.tg2, text=T5, command=self.cb_set_task_team5)
+        ui.tg2.tt5.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt6 = Button(ui.tg2, text=T6, command=self.cb_set_task_team6)
+        ui.tg2.tt6.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt7 = Button(ui.tg2, text=T7, command=self.cb_set_task_team7)
+        ui.tg2.tt7.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt8 = Button(ui.tg2, text=T8, command=self.cb_set_task_team8)
+        ui.tg2.tt8.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt9 = Button(ui.tg2, text=T9, command=self.cb_set_task_team9)
+        ui.tg2.tt9.pack(side=LEFT, padx=2, pady=2)
+        ui.tg2.tt0 = Button(ui.tg2, text=T0, command=self.cb_set_task_team0)
+        ui.tg2.tt0.pack(side=LEFT, padx=2, pady=2)
         # filterbar
         ui.fb = Frame(ui)
         ui.fb.pack(fill=X)
         self.mask = StringVar()
         self.mask.set("%")
-        ui.fb.lbl = Label(ui.fb, text="Tasks filter: ")
-        ui.fb.lbl.pack(side=LEFT, padx=2, pady=2)
         ui.fb.src = Entry(ui.fb, textvariable=self.mask)
         ui.fb.config(height=0)
-        ui.fb.src.pack(side=LEFT,expand=True, fill=X, padx=2, pady=2)
+        ui.fb.src.pack(side=LEFT, expand=True, fill=X, padx=2, pady=2)
         self.filter = True
         ui.fb.but = Button(ui.fb, text="Apply", command=self.cb_filter)
         ui.fb.but.pack(side=LEFT, padx=2, pady=2)
@@ -747,6 +802,7 @@ class to_do_app(object):
         ui.bind("<F11>", self.cb_open_console)
         ui.lb.bind("<n>", self.cb_new_task)
         ui.lb.bind("<c>", self.cb_copy_task)
+        ui.lb.bind("<d>", self.cb_duplicate_task)
         ui.lb.bind("<p>", self.cb_paste_task)
         ui.lb.bind("<e>", self.cb_edit_task)
         ui.lb.bind("<r>", self.cb_toggle_task_archive)
@@ -756,7 +812,6 @@ class to_do_app(object):
         ui.lb.bind("<h>", self.cb_display_help)
         ui.fb.src.bind("<Return>", self.cb_filter)
         ui.lb.bind("<Double-Button-1>", self.cb_edit_task)
-        ui.lb.bind("<Button-2>", self.cb_set_task_project)
         ui.lb.bind("<Double-Button-3>", self.cb_toggle_task_urgent)
         return(ui)
 
@@ -771,6 +826,14 @@ class console(object):
         self.db = db
         self.master = master
         self.ui = self.console_draw_ui()
+        self.ui.term.insert(END ,"  _____ ___  _   _ _____  ___  _      ____  \n")
+        self.ui.term.insert(END ," / ____/ _ \| \ | | ____|/ _ \| |    |___ \ \n")
+        self.ui.term.insert(END ,"| |   | | | |  \| | |__ | | | | |      __) |\n")
+        self.ui.term.insert(END ,"| |   | | | | . ` |___ \| | | | |     |__ < \n")
+        self.ui.term.insert(END ,"| |___| |_| | |\  |___) | |_| | |____ ___) |\n")
+        self.ui.term.insert(END ," \_____\___/|_| \_|____/ \___/|______|____/ \n")
+        self.ui.term.insert(END ,"                                            \n")
+        self.ui.term.insert(END ,"\n")
         self.ui.term.insert(END ,"Type your request and press <Enter>.\n")
         self.ui.mainloop()
     
@@ -786,8 +849,7 @@ class console(object):
                 cur = self.db.execute(sql)
                 self.ui.term.insert(END ,">>> {0}\n".format(sql))
                 self.db.commit()
-                if sql.lstrip().upper().startswith("SELECT"):
-                    res = cur.fetchall()
+                res = cur.fetchall()
             except SqlError as e:
                 msg = "{0}".format(e.args[0])
                 self.ui.term.insert(END ,"{0}\n".format(msg))
@@ -804,9 +866,9 @@ class console(object):
     def console_draw_ui(self):
         "Draw the UI"
         ui = Tk()
-        ui.title("console")
+        ui.title("C0N50L3")
         # Console
-        ui.term = ScrolledText(ui)
+        ui.term = ScrolledText(ui, bg='black', fg='green')
         ui.term.pack(fill=BOTH, expand=1)
         # Barre commande
         ui.cmd = Entry(ui)
