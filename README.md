@@ -22,3 +22,7 @@ The About/Help windows :
 
 ![2do-help](2do-help.png)
 
+
+The console :
+
+![2do-console](2do-console.png)
