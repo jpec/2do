@@ -814,6 +814,7 @@ class console(object):
         return(ui)
 
 
+    
 if __name__ == '__main__':
     # start the program
     run = to_do_app(PROGRAM, VERSION, DOCHELP)
