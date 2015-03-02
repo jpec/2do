@@ -11,21 +11,24 @@ PATH = "~"
 SDBFILE = "{0}/2do_{1}.db".format(PATH, BASE)
 
 # milestones
-M1 = {'lb' : "Project1", 'fg' : "black", 'bg' : "white"}
-M2 = {'lb' : "Project2", 'fg' : "black", 'bg' : "white"}
-M3 = {'lb' : "Project3", 'fg' : "black", 'bg' : "white"}
-M4 = {'lb' : "Project4", 'fg' : "black", 'bg' : "white"}
-M5 = {'lb' : "Project5", 'fg' : "black", 'bg' : "white"}
-M6 = {'lb' : "Project6", 'fg' : "black", 'bg' : "white"}
-M7 = {'lb' : "Project7", 'fg' : "black", 'bg' : "white"}
-M8 = {'lb' : "Project8", 'fg' : "black", 'bg' : "white"}
-M9 = {'lb' : "Project9", 'fg' : "black", 'bg' : "white"}
-M0 = {'lb' : "Project0", 'fg' : "black", 'bg' : "white"}
+MILESTONES = {
+    1 : {'lb' : "Project1", 'fg' : "black", 'bg' : "white"},
+    2 : {'lb' : "Project2", 'fg' : "black", 'bg' : "white"},
+    3 : {'lb' : "Project3", 'fg' : "black", 'bg' : "white"},
+    4 : {'lb' : "Project4", 'fg' : "black", 'bg' : "white"},
+    5 : {'lb' : "Project5", 'fg' : "black", 'bg' : "white"},
+    6 : {'lb' : "Project6", 'fg' : "black", 'bg' : "white"},
+    7 : {'lb' : "Project7", 'fg' : "black", 'bg' : "white"},
+    8 : {'lb' : "Project8", 'fg' : "black", 'bg' : "white"},
+    9 : {'lb' : "Project9", 'fg' : "black", 'bg' : "white"},
+    10 : {'lb' : "Project10", 'fg' : "black", 'bg' : "white"},
+    11 : {'lb' : "Project11", 'fg' : "black", 'bg' : "white"}
+}
 
 # teams
 T1 = {'lb' : "ANA", 'fg' : "red", 'bg' : "white"}
 T2 = {'lb' : "CHF", 'fg' : "darkblue", 'bg' : "white"}
-T3 = {'lb' : "Q/A", 'fg' : "orange", 'bg' : "white"}
+T3 = {'lb' : "Q/R", 'fg' : "orange", 'bg' : "white"}
 T4 = {'lb' : "DEV", 'fg' : "black", 'bg' : "#FF9999"}
 T5 = {'lb' : "COR", 'fg' : "black", 'bg' : "#7ACCA3"}
 T6 = {'lb' : "QAL", 'fg' : "black", 'bg' : "orange"}
@@ -61,13 +64,14 @@ Keyboard shortcuts on main window:
  <F3> Paste task
  <F4> Duplicate task
  <F5> Edit task
- <F6> Toggle Status
- <F7> Toggle Urgent
- <F8> Delete task
- <F9> Reload data
- <F10> Open console
- <F11> View trash
- <F12> Help
+ <F6> Set date
+ <F7> Toggle Status
+ <F8> Toggle Urgent
+ <F9> Delete task
+ <F10> Reload data
+ <F11> Open console
+ <F12> View trash
+ <ESC> Help
 
 """.format(PROGRAM, VERSION)
 
@@ -157,7 +161,7 @@ class to_do_app(object):
 
     def db_create_tables(self, db):
         "Create the database's tables"
-        sql = "CREATE TABLE tasks (task TEXT, milestone TEXT, active INT, done INT, urgent INT, team TEXT);"
+        sql = "CREATE TABLE tasks (task TEXT, milestone TEXT, active INT, done INT, urgent INT, team TEXT, date TEXT);"
         debug([sql])
         db.execute(sql)
         db.commit()
@@ -186,6 +190,8 @@ class to_do_app(object):
             sql = "UPDATE tasks SET urgent = ? WHERE rowid = ? ;"
         elif tag == "task":
             sql = "UPDATE tasks SET task = ? WHERE rowid = ? ;"
+        elif tag == "date":
+            sql = "UPDATE tasks SET date = ? WHERE rowid = ? ;"
         else:
             return(False)
         debug([sql, value, id])
@@ -195,13 +201,13 @@ class to_do_app(object):
 
     def db_get_tasks_list(self, archives, mask="%"):
         "Get the tasks list"
-        sql = "SELECT rowid, task, milestone, active, done, urgent, team FROM tasks WHERE active = ? AND (task LIKE ? OR team LIKE ? OR milestone LIKE ?) ORDER BY milestone, task, rowid ;"
+        sql = "SELECT rowid, task, milestone, active, done, urgent, team, date FROM tasks WHERE active = ? AND (task LIKE ? OR team LIKE ? OR milestone LIKE ? OR date LIKE ?) ORDER BY milestone, task, rowid ;"
         if archives:
             debug([sql, 0, mask, mask, mask])
-            r = self.db.execute(sql, (0, mask, mask, mask))
+            r = self.db.execute(sql, (0, mask, mask, mask, mask))
         else:
             debug([sql, 1, mask, mask, mask])
-            r = self.db.execute(sql, (1, mask, mask, mask))
+            r = self.db.execute(sql, (1, mask, mask, mask, mask))
         return(r.fetchall())
 
     def task_create_task_from_task(self, id):
@@ -215,12 +221,12 @@ class to_do_app(object):
 
     def task_get_task_details(self, id):
         "Get task's details"
-        sql = "SELECT rowid, task, milestone, active, done, urgent, team FROM tasks WHERE rowid = ? ;"
+        sql = "SELECT rowid, task, milestone, active, done, urgent, team, date FROM tasks WHERE rowid = ? ;"
         debug([sql, id])
         r = self.db.execute(sql, (id, ))
         t = dict()
-        for id, task, milestone, active, done, urgent, team in r.fetchall():
-            debug([id, task, milestone, active, done, urgent, team])
+        for id, task, milestone, active, done, urgent, team, date in r.fetchall():
+            debug([id, task, milestone, active, done, urgent, team, date])
             t['id'] = id
             t['task'] = task
             t['milestone'] = milestone
@@ -228,6 +234,7 @@ class to_do_app(object):
             t['done'] = int(done)
             t['urgent'] = int(urgent)
             t['team'] = team
+            t['date'] = date
             return(t)
 
 
@@ -255,18 +262,11 @@ class to_do_app(object):
             self.ui.tb.pas.configure(state=DISABLED)
             self.ui.tb.dup.configure(state=DISABLED)
             self.ui.tb.edi.configure(state=DISABLED)
+            self.ui.tb.dat.configure(state=DISABLED)
             self.ui.tb.don.configure(state=DISABLED)
             self.ui.tb.urg.configure(state=DISABLED)
-            self.ui.tg1.tm1.configure(state=DISABLED)
-            self.ui.tg1.tm2.configure(state=DISABLED)
-            self.ui.tg1.tm3.configure(state=DISABLED)
-            self.ui.tg1.tm4.configure(state=DISABLED)
-            self.ui.tg1.tm5.configure(state=DISABLED)
-            self.ui.tg1.tm6.configure(state=DISABLED)
-            self.ui.tg1.tm7.configure(state=DISABLED)
-            self.ui.tg1.tm8.configure(state=DISABLED)
-            self.ui.tg1.tm9.configure(state=DISABLED)
-            self.ui.tg1.tm0.configure(state=DISABLED)
+            for key in MILESTONES.keys():
+                self.ui.tg1.key.configure(state=DISABLED)
             self.ui.tg2.tt1.configure(state=DISABLED)
             self.ui.tg2.tt2.configure(state=DISABLED)
             self.ui.tg2.tt3.configure(state=DISABLED)
@@ -288,18 +288,11 @@ class to_do_app(object):
             self.ui.tb.pas.configure(state=NORMAL)
             self.ui.tb.dup.configure(state=NORMAL)
             self.ui.tb.edi.configure(state=NORMAL)
+            self.ui.tb.dat.configure(state=NORMAL)
             self.ui.tb.don.configure(state=NORMAL)
             self.ui.tb.urg.configure(state=NORMAL)
-            self.ui.tg1.tm1.configure(state=NORMAL)
-            self.ui.tg1.tm2.configure(state=NORMAL)
-            self.ui.tg1.tm3.configure(state=NORMAL)
-            self.ui.tg1.tm4.configure(state=NORMAL)
-            self.ui.tg1.tm5.configure(state=NORMAL)
-            self.ui.tg1.tm6.configure(state=NORMAL)
-            self.ui.tg1.tm7.configure(state=NORMAL)
-            self.ui.tg1.tm8.configure(state=NORMAL)
-            self.ui.tg1.tm9.configure(state=NORMAL)
-            self.ui.tg1.tm0.configure(state=NORMAL)
+            for key in MILESTONES.keys():
+                self.ui.tg1.key.configure(state=NORMAL)
             self.ui.tg2.tt1.configure(state=NORMAL)
             self.ui.tg2.tt2.configure(state=NORMAL)
             self.ui.tg2.tt3.configure(state=NORMAL)
@@ -363,55 +356,25 @@ class to_do_app(object):
                     self.ui_display_log("Task {0} edited !".format(id))
             self.ui_reload_tasks_list(self.archives, task=id)
 
-    def cb_set_task_milestone1(self, event=None):
-        "Event tag milestone 1"
+    def cb_set_date(self, event=None):
+        "Event set date"
         if not self.archives:
-            self.task_set_property('milestone', M1['lb'])
-
-    def cb_set_task_milestone2(self, event=None):
-        "Event tag milestone 2"
+            ids = self.ui.lb.curselection()
+            for task in ids:
+                id = self.tasks[str(task)]
+                old = self.task_get_date(id)
+                self.ui_display_log("Setting date for task {0}…".format(id))
+                new = askstring("Editing task…", "Enter the new due date (DD/MM/YYYY) :",
+                                initialvalue=old)
+                if new:
+                    self.db_set_task_property(id, "date", new)
+                    self.ui_display_log("Task {0} edited !".format(id))
+            self.ui_reload_tasks_list(self.archives, task=id)
+            
+    def cb_set_task_milestone(self, milestone=None):
+        "Event tag milestone"
         if not self.archives:
-            self.task_set_property('milestone', M2['lb'])
-
-    def cb_set_task_milestone3(self, event=None):
-        "Event tag milestone 3"
-        if not self.archives:
-            self.task_set_property('milestone', M3['lb'])
-
-    def cb_set_task_milestone4(self, event=None):
-        "Event tag milestone 4"
-        if not self.archives:
-            self.task_set_property('milestone', M4['lb'])
-
-    def cb_set_task_milestone5(self, event=None):
-        "Event tag milestone 5"
-        if not self.archives:
-            self.task_set_property('milestone', M5['lb'])
-
-    def cb_set_task_milestone6(self, event=None):
-        "Event tag milestone 6"
-        if not self.archives:
-            self.task_set_property('milestone', M6['lb'])
-
-    def cb_set_task_milestone7(self, event=None):
-        "Event tag milestone 7"
-        if not self.archives:
-            self.task_set_property('milestone', M7['lb'])
-
-    def cb_set_task_milestone8(self, event=None):
-        "Event tag milestone 8"
-        if not self.archives:
-            self.task_set_property('milestone', M8['lb'])
-
-    def cb_set_task_milestone9(self, event=None):
-        "Event tag milestone 9"
-        if not self.archives:
-            self.task_set_property('milestone', M9['lb'])
-
-    def cb_set_task_milestone0(self, event=None):
-        "Event tag milestone 0"
-        if not self.archives:
-            self.task_set_property('milestone', M0['lb'])
+            self.task_set_property('milestone', milestone)
 
     def cb_set_task_team1(self, event=None):
         "Event tag team 1"
@@ -528,6 +491,11 @@ class to_do_app(object):
         t = self.task_get_task_details(id)
         return(t['task'])
 
+    def task_get_date(self, id):
+        "Get task's date"
+        t = self.task_get_task_details(id)
+        return(t['date'])
+
     def task_is_urgent(self, id):
         "Get urgent flag for the task"
         t = self.task_get_task_details(id)
@@ -590,11 +558,13 @@ class to_do_app(object):
         "Load the tasks list"
         l = self.db_get_tasks_list(archives, self.mask.get())
         i = 0
-        for id, task, milestone, active, done, urgent, team in l:
+        for id, task, milestone, active, done, urgent, team, date in l:
             if archives:
                 lbl = "[{0}] {1} ({2}) | id={3}".format(milestone, task, team, id)
             elif int(done) > 0:
                 lbl = "[{0}] {1}".format(milestone, task)
+            elif date:
+                lbl = "[{0}] {1} <– {2} ({3})".format(milestone, date, task, team)
             else:
                 lbl = "[{0}] {1} ({2})".format(milestone, task, team)
             self.ui.lb.insert(i, lbl)
@@ -634,6 +604,18 @@ class to_do_app(object):
         debug([msg])
         self.ui.sb.ui_display_log.configure(text="{0}".format(msg))
 
+    def ui_draw_milestone_buttons(self, ui):
+        "Draw milestone toolbar"
+        # 'M1' : {'lb' : "VF1AICS2", 'fg' : "black", 'bg' : "white"},
+        tg1= Frame(ui)
+        tg1.pack(fill=X)
+        for key in MILESTONES.keys():
+            tg1.key = Button(tg1, text=MILESTONES[key]['lb'], fg=MILESTONES[key]['fg'], bg=MILESTONES[key]['bg'])
+            tg1.key.configure(command=lambda k=MILESTONES[key]['lb']: self.cb_set_task_milestone(k))
+            tg1.key.pack(side=LEFT, padx=2, pady=2)
+            print(MILESTONES[key]['lb'])
+        return(tg1)
+
     def ui_draw_window(self):
         "Draw the UI"
         ui = Tk()
@@ -652,66 +634,47 @@ class to_do_app(object):
         ui.tb.dup.pack(side=LEFT, padx=2, pady=2)
         ui.tb.edi = Button(ui.tb, text="Edit\nF5", width=6, command=self.cb_edit_task)
         ui.tb.edi.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.don = Button(ui.tb, text="Status\nF6", width=6, command=self.cb_toggle_task_done)
+        ui.tb.dat = Button(ui.tb, text="Date\nF6", width=6, command=self.cb_set_date)
+        ui.tb.dat.pack(side=LEFT, padx=2, pady=2)
+        ui.tb.don = Button(ui.tb, text="Status\nF7", width=6, command=self.cb_toggle_task_done)
         ui.tb.don.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.urg = Button(ui.tb, text="Urgent\nF7", width=6, command=self.cb_toggle_task_urgent)
+        ui.tb.urg = Button(ui.tb, text="Urgent\nF8", width=6, command=self.cb_toggle_task_urgent)
         ui.tb.urg.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.arc = Button(ui.tb, text="Remove\nF8", width=6, command=self.cb_toggle_task_archive)
+        ui.tb.arc = Button(ui.tb, text="Remove\nF9", width=6, command=self.cb_toggle_task_archive)
         ui.tb.arc.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.ref = Button(ui.tb, text="Refresh\nF9", width=6, command=self.cb_refresh)
+        ui.tb.ref = Button(ui.tb, text="Refresh\nF10", width=6, command=self.cb_refresh)
         ui.tb.ref.pack(side=LEFT, padx=2, pady=2)
-        ui.tb.hlp = Button(ui.tb, text="Help\nF12", width=6, command=self.cb_display_help)
+        ui.tb.hlp = Button(ui.tb, text="Help\nESC", width=6, command=self.cb_display_help)
         ui.tb.hlp.pack(side=RIGHT, padx=2, pady=2)
-        ui.tb.vis = Button(ui.tb, text="Trash\nF11", width=6, command=self.cb_toggle_display)
+        ui.tb.vis = Button(ui.tb, text="Trash\nF12", width=6, command=self.cb_toggle_display)
         ui.tb.vis.pack(side=RIGHT, padx=2, pady=2)
-        ui.tb.cmd = Button(ui.tb, text="Console\nF10", width=6, command=self.cb_open_console)
+        ui.tb.cmd = Button(ui.tb, text="Console\nF11", width=6, command=self.cb_open_console)
         ui.tb.cmd.pack(side=RIGHT, padx=2, pady=2)
-        # tagbar 1
-        ui.tg1= Frame(ui)
-        ui.tg1.pack(fill=X)
-        ui.tg1.tm1 = Button(ui.tg1, text=M1['lb'], fg=M1['fg'], bg=M1['bg'], command=self.cb_set_task_milestone1)
-        ui.tg1.tm1.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm2 = Button(ui.tg1, text=M2['lb'], fg=M2['fg'], bg=M2['bg'], command=self.cb_set_task_milestone2)
-        ui.tg1.tm2.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm3 = Button(ui.tg1, text=M3['lb'], fg=M3['fg'], bg=M3['bg'], command=self.cb_set_task_milestone3)
-        ui.tg1.tm3.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm4 = Button(ui.tg1, text=M4['lb'], fg=M4['fg'], bg=M4['bg'], command=self.cb_set_task_milestone4)
-        ui.tg1.tm4.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm5 = Button(ui.tg1, text=M5['lb'], fg=M5['fg'], bg=M5['bg'], command=self.cb_set_task_milestone5)
-        ui.tg1.tm5.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm6 = Button(ui.tg1, text=M6['lb'], fg=M6['fg'], bg=M6['bg'], command=self.cb_set_task_milestone6)
-        ui.tg1.tm6.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm7 = Button(ui.tg1, text=M7['lb'], fg=M7['fg'], bg=M7['bg'], command=self.cb_set_task_milestone7)
-        ui.tg1.tm7.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm8 = Button(ui.tg1, text=M8['lb'], fg=M8['fg'], bg=M8['bg'], command=self.cb_set_task_milestone8)
-        ui.tg1.tm8.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm9 = Button(ui.tg1, text=M9['lb'], fg=M9['fg'], bg=M9['bg'], command=self.cb_set_task_milestone9)
-        ui.tg1.tm9.pack(side=LEFT, padx=2, pady=2)
-        ui.tg1.tm0 = Button(ui.tg1, text=M0['lb'], fg=M0['fg'], bg=M0['bg'], command=self.cb_set_task_milestone0)
-        ui.tg1.tm0.pack(side=LEFT, padx=2, pady=2)
         # tagbar 2
         ui.tg2 = Frame(ui)
         ui.tg2.pack(fill=X)
-        ui.tg2.tt1 = Button(ui.tg2, text=T1['lb'], fg=T1['fg'], bg=T1['bg'], command=self.cb_set_task_team1)
+        ui.tg2.tt1 = Button(ui.tg2,  width=6, text=T1['lb'], fg=T1['fg'], bg=T1['bg'], command=self.cb_set_task_team1)
         ui.tg2.tt1.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt2 = Button(ui.tg2, text=T2['lb'], fg=T2['fg'], bg=T2['bg'], command=self.cb_set_task_team2)
+        ui.tg2.tt2 = Button(ui.tg2,  width=6, text=T2['lb'], fg=T2['fg'], bg=T2['bg'], command=self.cb_set_task_team2)
         ui.tg2.tt2.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt3 = Button(ui.tg2, text=T3['lb'], fg=T3['fg'], bg=T3['bg'], command=self.cb_set_task_team3)
+        ui.tg2.tt3 = Button(ui.tg2,  width=6, text=T3['lb'], fg=T3['fg'], bg=T3['bg'], command=self.cb_set_task_team3)
         ui.tg2.tt3.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt4 = Button(ui.tg2, text=T4['lb'], fg=T4['fg'], bg=T4['bg'], command=self.cb_set_task_team4)
+        ui.tg2.tt4 = Button(ui.tg2,  width=6, text=T4['lb'], fg=T4['fg'], bg=T4['bg'], command=self.cb_set_task_team4)
         ui.tg2.tt4.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt5 = Button(ui.tg2, text=T5['lb'], fg=T5['fg'], bg=T5['bg'], command=self.cb_set_task_team5)
+        ui.tg2.tt5 = Button(ui.tg2,  width=6, text=T5['lb'], fg=T5['fg'], bg=T5['bg'], command=self.cb_set_task_team5)
         ui.tg2.tt5.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt6 = Button(ui.tg2, text=T6['lb'], fg=T6['fg'], bg=T6['bg'], command=self.cb_set_task_team6)
+        ui.tg2.tt6 = Button(ui.tg2,  width=6, text=T6['lb'], fg=T6['fg'], bg=T6['bg'], command=self.cb_set_task_team6)
         ui.tg2.tt6.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt7 = Button(ui.tg2, text=T7['lb'], fg=T7['fg'], bg=T7['bg'], command=self.cb_set_task_team7)
+        ui.tg2.tt7 = Button(ui.tg2,  width=6, text=T7['lb'], fg=T7['fg'], bg=T7['bg'], command=self.cb_set_task_team7)
         ui.tg2.tt7.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt8 = Button(ui.tg2, text=T8['lb'], fg=T8['fg'], bg=T8['bg'], command=self.cb_set_task_team8)
+        ui.tg2.tt8 = Button(ui.tg2,  width=6, text=T8['lb'], fg=T8['fg'], bg=T8['bg'], command=self.cb_set_task_team8)
         ui.tg2.tt8.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt9 = Button(ui.tg2, text=T9['lb'], fg=T9['fg'], bg=T9['bg'], command=self.cb_set_task_team9)
+        ui.tg2.tt9 = Button(ui.tg2,  width=6, text=T9['lb'], fg=T9['fg'], bg=T9['bg'], command=self.cb_set_task_team9)
         ui.tg2.tt9.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt0 = Button(ui.tg2, text=T0['lb'], fg=T0['fg'], bg=T0['bg'], command=self.cb_set_task_team0)
+        ui.tg2.tt0 = Button(ui.tg2,  width=6, text=T0['lb'], fg=T0['fg'], bg=T0['bg'], command=self.cb_set_task_team0)
         ui.tg2.tt0.pack(side=LEFT, padx=2, pady=2)
+        # tagbar 1
+        ui.tg1 = self.ui_draw_milestone_buttons(ui)
         # filterbar
         ui.fb = Frame(ui)
         ui.fb.pack(fill=X)
@@ -742,13 +705,14 @@ class to_do_app(object):
         ui.bind("<F3>", self.cb_paste_task)
         ui.lb.bind("<F4>", self.cb_duplicate_task)
         ui.lb.bind("<F5>", self.cb_edit_task)
-        ui.lb.bind("<F6>", self.cb_toggle_task_done)
-        ui.lb.bind("<F7>", self.cb_toggle_task_urgent)
-        ui.lb.bind("<F8>", self.cb_toggle_task_archive)
-        ui.bind("<F9>", self.cb_refresh)
-        ui.bind("<F10>", self.cb_open_console)
-        ui.bind("<F11>", self.cb_toggle_display)
-        ui.bind("<F12>", self.cb_display_help)
+        ui.lb.bind("<F6>", self.cb_set_date)
+        ui.lb.bind("<F7>", self.cb_toggle_task_done)
+        ui.lb.bind("<F8>", self.cb_toggle_task_urgent)
+        ui.lb.bind("<F9>", self.cb_toggle_task_archive)
+        ui.bind("<F10>", self.cb_refresh)
+        ui.bind("<F11>", self.cb_open_console)
+        ui.bind("<F12>", self.cb_toggle_display)
+        ui.bind("<Escape>", self.cb_display_help)
         ui.fb.src.bind("<Return>", self.cb_filter)
         ui.lb.bind("<Double-Button-1>", self.cb_edit_task)
         ui.lb.bind("<Double-Button-3>", self.cb_toggle_task_urgent)
@@ -814,7 +778,6 @@ class console(object):
         return(ui)
 
 
-    
 if __name__ == '__main__':
     # start the program
     run = to_do_app(PROGRAM, VERSION, DOCHELP)
