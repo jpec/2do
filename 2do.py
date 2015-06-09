@@ -9,18 +9,6 @@
 BASE = "test"
 PATH = "."
 SDBFILE = "{0}/2do_{1}.db".format(PATH, BASE)
-
-# teams
-T1 = {'lb' : "ANA", 'fg' : "#000000", 'bg' : "#F68383"}
-T2 = {'lb' : "CHF", 'fg' : "#000000", 'bg' : "#81DAF5"}
-T3 = {'lb' : "Q/R", 'fg' : "#DF731B", 'bg' : "#FFFFFF"}
-T4 = {'lb' : "DEV", 'fg' : "#000000", 'bg' : "#D083F6"}
-T5 = {'lb' : "COR", 'fg' : "#000000", 'bg' : "#86F683"}
-T6 = {'lb' : "QAL", 'fg' : "#000000", 'bg' : "#F6B783"}
-T7 = {'lb' : "RE7", 'fg' : "#088A08", 'bg' : "#FFFFFF"}
-T8 = {'lb' : "ARB", 'fg' : "#1B7ADF", 'bg' : "#FFFFFF"}
-T9 = {'lb' : "VAL", 'fg' : "#A4A4A4", 'bg' : "#FFFFFF"}
-T0 = {'lb' : "N/A", 'fg' : "#000000", 'bg' : "#FFFFFF"}
  
 # mode debug
 DEBUG = False
@@ -31,7 +19,7 @@ DEBUG = False
 #---------------------------------------------------------------------
 
 PROGRAM = "2do {}".format(BASE)
-VERSION = "v2.1"
+VERSION = "v2.2"
 DOCHELP = """
 {0} {1}
 --
@@ -40,7 +28,7 @@ It's written in Python using Tkinter and Sqlite.
 --
 Author: Julien Pecqueur
 Home: http://github.com/jpec/2do
-Email: jpec@julienpecqueur.net
+Email: julien@peclu.net
 License: GPL
 --
 Keyboard shortcuts on main window:
@@ -153,20 +141,37 @@ class to_do_app(object):
         debug([sql])
         db.execute(sql)
         db.commit()
-        sql = "CREATE TABLE milestones (label VARCHAR(30) PRIMARY KEY NOT NULL, active BOOLEAN DEFAULT (1));"
+        sql = "CREATE TABLE milestones (lb TEXT PRIMARY KEY NOT NULL, fg TEXT DEFAULT ('#000000'), bg TEXT DEFAULT ('#FFFFFF'), active BOOLEAN DEFAULT (1));"
         debug([sql])
         db.execute(sql)
         db.commit()
-        sql = "INSERT INTO milestone(label) VALUES('milestone');"
+        sql = "INSERT INTO milestones(lb) VALUES('milestone');"
         debug([sql])
         db.execute(sql)
+        db.commit()
+        sql = "CREATE TABLE teams (lb TEXT PRIMARY KEY NOT NULL, fg TEXT DEFAULT ('#000000'), bg TEXT DEFAULT ('#FFFFFF'), active BOOLEAN DEFAULT (1));"
+        debug([sql])
+        db.execute(sql)
+        db.commit()
+        for team in [("ANA","#000000","#F68383"),("CHF","#000000","#81DAF5"),("Q/R","#DF731B","#FFFFFF"),
+                  ("DEV","#000000","#D083F6"),("COR","#000000","#86F683"),("QAL","#000000","#F6B783"),
+                  ("RE7","#088A08","#FFFFFF"),("ARB","#1B7ADF","#FFFFFF"),("VAL","#A4A4A4","#FFFFFF"),
+                  ("N/A", "#000000","#FFFFFF")]:
+            sql = "INSERT INTO teams(lb, fg, bg) VALUES(?, ?, ?);"
+            db.execute(sql, team)
         db.commit()
         self.db = db
         return(True)
 
     def db_get_milestones(self):
         "Get milestones"
-        sql = "SELECT label, active FROM milestones WHERE active = 1 ORDER BY label ;"
+        sql = "SELECT lb, active FROM milestones WHERE active = 1 ORDER BY lb ;"
+        r = self.db.execute(sql)
+        return(r.fetchall())
+
+    def db_get_teams(self):
+        "Get teams"
+        sql = "SELECT lb, fg, bg, active FROM teams WHERE active = 1 ;"
         r = self.db.execute(sql)
         return(r.fetchall())
         
@@ -369,55 +374,10 @@ class to_do_app(object):
         if not self.archives:
             self.task_set_property('milestone', milestone)
 
-    def cb_set_task_team1(self, event=None):
-        "Event tag team 1"
+    def cb_set_task_team(self, team=None):
+        "Event tag team"
         if not self.archives:
-            self.task_set_property('team', T1['lb'], True)
-
-    def cb_set_task_team2(self, event=None):
-        "Event tag team 2"
-        if not self.archives:
-            self.task_set_property('team', T2['lb'], True)
-
-    def cb_set_task_team3(self, event=None):
-        "Event tag team 3"
-        if not self.archives:
-            self.task_set_property('team', T3['lb'], True)
-
-    def cb_set_task_team4(self, event=None):
-        "Event tag team 4"
-        if not self.archives:
-            self.task_set_property('team', T4['lb'], True)
-
-    def cb_set_task_team5(self, event=None):
-        "Event tag team 5"
-        if not self.archives:
-            self.task_set_property('team', T5['lb'], True)
-
-    def cb_set_task_team6(self, event=None):
-        "Event tag team 6"
-        if not self.archives:
-            self.task_set_property('team', T6['lb'], True)
-
-    def cb_set_task_team7(self, event=None):
-        "Event tag team 7"
-        if not self.archives:
-            self.task_set_property('team', T7['lb'], True)
-
-    def cb_set_task_team8(self, event=None):
-        "Event tag team 8"
-        if not self.archives:
-            self.task_set_property('team', T8['lb'], True)
-
-    def cb_set_task_team9(self, event=None):
-        "Event tag team 9"
-        if not self.archives:
-            self.task_set_property('team', T9['lb'], True)
-
-    def cb_set_task_team0(self, event=None):
-        "Event tag team 0"
-        if not self.archives:
-            self.task_set_property('team', T0['lb'], True)
+            self.task_set_property('team', team, True)
 
     def cb_toggle_task_archive(self, event=None):
         "Event toggle archive flag"
@@ -574,6 +534,14 @@ class to_do_app(object):
             if c:
                 self.ui_reload_tasks_list(self.archives)
         return(c)
+
+    def get_teams(self):
+        "Get teams param"
+        l = self.db_get_teams()
+        t = {}
+        for lb, fg, bg, act in l:
+            t[lb] = (fg, bg)
+        return(t)
         
     def ui_reload_tasks_list(self, archives=False, selection=END, task=None):
         "Reload tasks/archives list"
@@ -597,13 +565,14 @@ class to_do_app(object):
     def ui_load_tasks_list(self, archives):
         "Load the tasks list"
         l = self.db_get_tasks_list(archives, self.mask.get())
+        teams = self.get_teams()
         i = 0
         for id, task, milestone, active, done, urgent, team, date in l:
             if archives:
                 lbl = "{0}|{1}|{2} ({3}) id={4}".format(str(milestone).ljust(8), str(date).ljust(10), task, team, id)
             elif int(done) > 0:
                 lbl = "{0}|{1}|{2}".format(str(milestone).ljust(8), str(date).ljust(10), task)
-            elif team == T0['lb']:
+            elif team == "N/A":
                 lbl = "{0}|{1}".format(str(milestone).ljust(8), task)
             elif date:
                 lbl = "{0}|{1}|{2} ({3})".format(str(milestone).ljust(8), str(date).ljust(10), task, team)
@@ -614,28 +583,11 @@ class to_do_app(object):
                 self.ui.lb.itemconfig(i, fg='grey', bg='white')
             elif int(urgent) > 0:
                 self.ui.lb.itemconfig(i, fg='white', bg='red')
-            elif team == T0['lb'] and len(task) > 1 and task[0] == "*":
-                self.ui.lb.itemconfig(i, fg=T0['fg'], bg='#EEE') 
-            elif team == T1['lb']:
-                self.ui.lb.itemconfig(i, fg=T1['fg'], bg=T1['bg'])
-            elif team == T2['lb']:
-                self.ui.lb.itemconfig(i, fg=T2['fg'], bg=T2['bg'])
-            elif team == T3['lb']:
-                self.ui.lb.itemconfig(i, fg=T3['fg'], bg=T3['bg'])
-            elif team == T4['lb']:
-                self.ui.lb.itemconfig(i, fg=T4['fg'], bg=T4['bg'])
-            elif team == T5['lb']:
-                self.ui.lb.itemconfig(i, fg=T5['fg'], bg=T5['bg'])
-            elif team == T6['lb']:
-                self.ui.lb.itemconfig(i, fg=T6['fg'], bg=T6['bg'])
-            elif team == T7['lb']:
-                self.ui.lb.itemconfig(i, fg=T7['fg'], bg=T7['bg'])
-            elif team == T8['lb']:
-                self.ui.lb.itemconfig(i, fg=T8['fg'], bg=T8['bg'])
-            elif team == T9['lb']:
-                self.ui.lb.itemconfig(i, fg=T9['fg'], bg=T9['bg'])
-            elif team == T0['lb']:
-                self.ui.lb.itemconfig(i, fg=T0['fg'], bg=T0['bg']) 
+            elif team == 'N/A' and len(task) > 1 and task[0] == "*":
+                self.ui.lb.itemconfig(i, fg='black', bg='#EEE') 
+            elif team in teams:
+                t_fg, t_bg = teams[team]
+                self.ui.lb.itemconfig(i, fg=t_fg, bg=t_bg) 
             else:
                 self.ui.lb.itemconfig(i, fg="black", bg="white")
             self.tasks[str(i)] = id
@@ -648,16 +600,27 @@ class to_do_app(object):
         debug([msg])
         self.ui.sb.ui_display_log.configure(text="{0}".format(msg))
 
+    def ui_draw_team_buttons(self, ui):
+        "Draw team toolbar"
+        tg= Frame(ui)
+        tg.pack(fill=X)
+        l = self.db_get_teams()
+        for team, fg, bg, active in l:
+            tg.team = Button(tg, text=team, fg=fg, bg=bg)
+            tg.team.configure(command=lambda k=str(team): self.cb_set_task_team(k))
+            tg.team.pack(side=LEFT, padx=2, pady=2)
+        return(tg)
+
     def ui_draw_milestone_buttons(self, ui):
         "Draw milestone toolbar"
-        tg1= Frame(ui)
-        tg1.pack(fill=X)
+        tg= Frame(ui)
+        tg.pack(fill=X)
         l = self.db_get_milestones()
         for milestone, active in l:
-            tg1.milestone = Button(tg1, text=milestone)
-            tg1.milestone.configure(command=lambda k=str(milestone): self.cb_set_task_milestone(k))
-            tg1.milestone.pack(side=LEFT, padx=2, pady=2)
-        return(tg1)
+            tg.milestone = Button(tg, text=milestone)
+            tg.milestone.configure(command=lambda k=str(milestone): self.cb_set_task_milestone(k))
+            tg.milestone.pack(side=LEFT, padx=2, pady=2)
+        return(tg)
 
     def ui_draw_window(self):
         "Draw the UI"
@@ -695,33 +658,10 @@ class to_do_app(object):
         ui.tb.vis.pack(side=RIGHT, padx=2, pady=2)
         ui.tb.cmd = Button(ui.tb, text="Console\nF11", width=w, height=h, bg="grey", command=self.cb_open_console)
         ui.tb.cmd.pack(side=RIGHT, padx=2, pady=2)
-        # tagbar 2
-        w = 6
-        h = 1
-        ui.tg2 = Frame(ui)
-        ui.tg2.pack(fill=X)
-        ui.tg2.tt1 = Button(ui.tg2, text=T1['lb'], fg=T1['fg'], bg=T1['bg'], width=w, height=h, command=self.cb_set_task_team1)
-        ui.tg2.tt1.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt2 = Button(ui.tg2, text=T2['lb'], fg=T2['fg'], bg=T2['bg'], width=w, height=h, command=self.cb_set_task_team2)
-        ui.tg2.tt2.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt3 = Button(ui.tg2, text=T3['lb'], fg=T3['fg'], bg=T3['bg'], width=w, height=h, command=self.cb_set_task_team3)
-        ui.tg2.tt3.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt4 = Button(ui.tg2, text=T4['lb'], fg=T4['fg'], bg=T4['bg'], width=w, height=h, command=self.cb_set_task_team4)
-        ui.tg2.tt4.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt5 = Button(ui.tg2, text=T5['lb'], fg=T5['fg'], bg=T5['bg'], width=w, height=h, command=self.cb_set_task_team5)
-        ui.tg2.tt5.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt6 = Button(ui.tg2, text=T6['lb'], fg=T6['fg'], bg=T6['bg'], width=w, height=h, command=self.cb_set_task_team6)
-        ui.tg2.tt6.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt7 = Button(ui.tg2, text=T7['lb'], fg=T7['fg'], bg=T7['bg'], width=w, height=h, command=self.cb_set_task_team7)
-        ui.tg2.tt7.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt8 = Button(ui.tg2, text=T8['lb'], fg=T8['fg'], bg=T8['bg'], width=w, height=h, command=self.cb_set_task_team8)
-        ui.tg2.tt8.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt9 = Button(ui.tg2, text=T9['lb'], fg=T9['fg'], bg=T9['bg'], width=w, height=h, command=self.cb_set_task_team9)
-        ui.tg2.tt9.pack(side=LEFT, padx=2, pady=2)
-        ui.tg2.tt0 = Button(ui.tg2, text=T0['lb'], fg=T0['fg'], bg=T0['bg'], width=w, height=h, command=self.cb_set_task_team0)
-        ui.tg2.tt0.pack(side=LEFT, padx=2, pady=2)
         # tagbar 1
-        ui.tg1 = self.ui_draw_milestone_buttons(ui)
+        ui.tg1 = self.ui_draw_team_buttons(ui)
+        # tagbar 2
+        ui.tg2 = self.ui_draw_milestone_buttons(ui)
         # filterbar
         ui.fb = Frame(ui)
         ui.fb.pack(fill=X)
@@ -828,7 +768,7 @@ class console(object):
         ui.bind('<Return>', self.console_execute_sql)
         ui.cmd.focus()
         return(ui)
-
+    
 
 if __name__ == '__main__':
     # start the program
