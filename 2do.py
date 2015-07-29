@@ -13,13 +13,12 @@ SDBFILE = "{0}/2do_{1}.db".format(PATH, BASE)
 # mode debug
 DEBUG = False
 
-
 #---------------------------------------------------------------------
 # PROGRAM
 #---------------------------------------------------------------------
 
 PROGRAM = "2do {}".format(BASE)
-VERSION = "v2.2"
+VERSION = "v2.3"
 DOCHELP = """
 {0} {1}
 --
@@ -73,6 +72,32 @@ def debug(msgs):
     if DEBUG:
         print("[DEBUG]", msgs)
 
+def start_to_do_app():
+    return(to_do_app(PROGRAM, VERSION, DOCHELP))
+
+def today():
+    now = datetime.now()
+    return(now.strftime("%d/%m/%Y"))
+
+def is_urgent(date):
+    if not (len(date) == 10 and date[2] == '/' and date[5] == '/'):
+        return(False)
+    try:
+        d = int(date[0:2])
+        m = int(date[3:5])
+        y = int(date[6:10])
+    except ValueError:
+        return(False)
+    else:
+        t = today()
+        dt = int(t[0:2])
+        mt = int(t[3:5])
+        yt = int(t[6:10])
+        if y < yt or (y == yt and m < mt) or (y == yt and m == mt and d <= dt):
+            return(True)
+        else:
+            return(False)
+    
 
 class to_do_app(object):
     "Class for 2do application"
@@ -137,7 +162,7 @@ class to_do_app(object):
 
     def db_create_tables(self, db):
         "Create the database's tables"
-        sql = "CREATE TABLE tasks (task TEXT, milestone TEXT, active INT, done INT, urgent INT, team TEXT, date TEXT);"
+        sql = "CREATE TABLE tasks (task TEXT, milestone TEXT, active INT, done INT, urgent INT, team TEXT, date TEXT, updated TEXT);"
         debug([sql])
         db.execute(sql)
         db.commit()
@@ -171,28 +196,31 @@ class to_do_app(object):
 
     def db_get_teams(self):
         "Get teams"
-        sql = "SELECT lb, fg, bg, active FROM teams WHERE active = 1 ;"
+        sql = "SELECT lb, fg, bg, active FROM teams WHERE active = 1 ORDER BY lb;"
         r = self.db.execute(sql)
         return(r.fetchall())
         
     def db_create_task(self, task, team):
         "Add the task in the database"
-        sql = "INSERT INTO tasks (task, milestone, team, active, done, urgent) VALUES (?, '', ?, 1, 0, 0);"
-        debug([sql, task, team])
-        id = self.db.execute(sql, (task, team)).lastrowid
+        sql = "INSERT INTO tasks (task, milestone, team, active, done, urgent, updated) VALUES (?, '', ?, 1, 0, 0, ?);"
+        debug([sql, task, team, today()])
+        id = self.db.execute(sql, (task, team, today())).lastrowid
         self.db.commit()
         return(id)
 
     def db_set_task_property(self, id, tag, value):
         "Set task property"
+        update_date = False
         if tag == "milestone":
             sql = "UPDATE tasks SET milestone = ? WHERE rowid = ? ;"
         elif tag == "team":
             sql = "UPDATE tasks SET team = ? WHERE rowid = ? ;"
+            update_date = True
         elif tag == "active":
             sql = "UPDATE tasks SET active = ? WHERE rowid = ? ;"
         elif tag == "done":
             sql = "UPDATE tasks SET done = ? WHERE rowid = ? ;"
+            update_date = True
         elif tag == "urgent":
             sql = "UPDATE tasks SET urgent = ? WHERE rowid = ? ;"
         elif tag == "task":
@@ -203,12 +231,16 @@ class to_do_app(object):
             return(False)
         debug([sql, value, id])
         self.db.execute(sql, (value, id))
+        if update_date:
+            sql = "UPDATE tasks SET updated = ? WHERE rowid = ? ;"
+            debug([sql, today(), id])
+            self.db.execute(sql, (today(), id))
         self.db.commit()
         return(True)
 
     def db_get_tasks_list(self, archives, mask="%"):
         "Get the tasks list"
-        sql = "SELECT rowid, task, milestone, active, done, urgent, team, date FROM tasks WHERE active = ? AND (task LIKE ? OR team LIKE ? OR milestone LIKE ? OR date LIKE ?) ORDER BY milestone, task, rowid ;"
+        sql = "SELECT rowid, task, milestone, active, done, urgent, team, date, updated FROM tasks WHERE active = ? AND (task LIKE ? OR team LIKE ? OR milestone LIKE ? OR date LIKE ?) ORDER BY milestone, task, rowid ;"
         if archives:
             debug([sql, 0, mask, mask, mask])
             r = self.db.execute(sql, (0, mask, mask, mask, mask))
@@ -220,20 +252,20 @@ class to_do_app(object):
     def task_create_task_from_task(self, id):
         "Create a task duplicating an existing task"
         task = self.task_get_task_details(id)
-        sql = "INSERT INTO tasks (task, milestone, team, active, done, urgent) VALUES (?, ?, ?, 1, 0, 0);"
+        sql = "INSERT INTO tasks (task, milestone, team, active, done, urgent, updated) VALUES (?, ?, ?, 1, 0, 0, ?);"
         debug([sql, task['task'], task['milestone'], task['team']])
-        new = self.db.execute(sql, (task['task'], task['milestone'], task['team'])).lastrowid
+        new = self.db.execute(sql, (task['task'], task['milestone'], task['team'], today())).lastrowid
         self.db.commit()
         return(new)
 
     def task_get_task_details(self, id):
         "Get task's details"
-        sql = "SELECT rowid, task, milestone, active, done, urgent, team, date FROM tasks WHERE rowid = ? ;"
+        sql = "SELECT rowid, task, milestone, active, done, urgent, team, date, updated FROM tasks WHERE rowid = ? ;"
         debug([sql, id])
         r = self.db.execute(sql, (id, ))
         t = dict()
-        for id, task, milestone, active, done, urgent, team, date in r.fetchall():
-            debug([id, task, milestone, active, done, urgent, team, date])
+        for id, task, milestone, active, done, urgent, team, date, updated in r.fetchall():
+            debug([id, task, milestone, active, done, urgent, team, date, updated])
             t['id'] = id
             t['task'] = task
             t['milestone'] = milestone
@@ -242,6 +274,7 @@ class to_do_app(object):
             t['urgent'] = int(urgent)
             t['team'] = team
             t['date'] = date
+            t['updated'] = updated
             return(t)
 
 
@@ -334,11 +367,21 @@ class to_do_app(object):
         self.ui.clipboard_clear()
         for task in tasks:
             id = self.tasks[str(task)]
-            # DEPRECATED :
             old = self.task_get_task_details(id)
             self.ui.clipboard_append(old['task'])
             self.ui_display_log("Task {0} copied.".format(id))
 
+    def cb_copy_notes(self, event=None):
+        "Event copy task for notes"
+        tasks = self.ui.lb.curselection()
+        self.ui.clipboard_clear()
+        for task in tasks:
+            id = self.tasks[str(task)]
+            old = self.task_get_task_details(id)
+            if len(old['task']) > 5:
+                self.ui.clipboard_append(old['task'][0:5]+", ")
+            self.ui_display_log("Ctrl + v to paste in Notes…")
+            
     def cb_edit_task(self, event=None):
         "Event edit task(s)"
         if not self.archives:
@@ -364,7 +407,7 @@ class to_do_app(object):
                 self.ui_display_log("Setting date for task {0}…".format(id))
                 new = askstring("Editing task…", "Enter the new due date (DD/MM/YYYY) :",
                                 initialvalue=old)
-                if new:
+                if new or new == '':
                     self.db_set_task_property(id, "date", new)
                     self.ui_display_log("Task {0} edited !".format(id))
             self.ui_reload_tasks_list(self.archives, task=id)
@@ -436,6 +479,29 @@ class to_do_app(object):
         t = "{0} {1}".format(self.program, self.version)
         showinfo(t, self.dochelp)
 
+    def cb_display_task(self, event=None):
+        "Event display task details"
+        ids = self.ui.lb.curselection()
+        for task in ids:
+            id = self.tasks[str(task)]
+            t = self.task_get_task_details(id)
+            text = t['task'] + "\n"
+            if t['urgent']:
+                text += "/!\\ URGENT /!\\ \n"
+            text += "Date: " + t['date'] + "\n"
+            text += "Updated: " + t['updated'] + "\n"
+            text += "Team: " + t['team'] + "\n"
+            text += "Milestone: " + t['milestone'] + "\n"
+            if t['done']:
+                text += "This task is finished.\n"
+            if not t['active']:
+                text += "This task is archived.\n"
+            showinfo("Task n°{0}".format(id), text)
+
+    def cb_restart(self, event=None):
+        self.ui.destroy()
+        start_to_do_app()
+
         
     ### FUNCTIONS ###################################################
 
@@ -445,9 +511,14 @@ class to_do_app(object):
         return(t['task'])
 
     def task_get_date(self, id):
-        "Get task's date"
+        "Get task's due date"
         t = self.task_get_task_details(id)
         return(t['date'])
+
+    def task_get_updated(self, id):
+        "Get task's update date"
+        t = self.task_get_task_details(id)
+        return(t['updated'])
 
     def task_is_urgent(self, id):
         "Get urgent flag for the task"
@@ -463,23 +534,15 @@ class to_do_app(object):
         "Get the *active* flag for the task"
         t = self.task_get_task_details(id)
         return(t['active'])
-
-    def task_update_date_now(self, id):
-        "Update the task's date"
-        now = datetime.now()
-        date = now.strftime("%d/%m/%Y")
-        if id:
-            self.db_set_task_property(id, "date", date)
-
+    
     def task_create(self, task=None):
         "Create a new task"
         self.ui_display_log("Appending new task…")
         if not task:
             task = askstring("New task ?", "Enter the new task :\nPlease use the following format :\n 'N° - Details for the task'")
         if task:
-            id = self.db_create_task(task, T1['lb'])
+            id = self.db_create_task(task, None)
             if id:
-                self.task_update_date_now(id)
                 self.ui_display_log("Task {0} added !".format(id))
                 self.ui_reload_tasks_list(self.archives, task=id)
             else:
@@ -491,8 +554,6 @@ class to_do_app(object):
         for task in ids:
             id = self.tasks[str(task)]
             if self.db_set_task_property(id, tag, value):
-                if update_date:
-                    self.task_update_date_now(id)
                 self.ui_display_log("Task {0} tagged for {1} !".format(id, value))
             else:
                 self.ui_display_log("Cannot tag {0} for {1} !".format(id, value))
@@ -504,9 +565,9 @@ class to_do_app(object):
         if fn:
             f = open(fn, 'w')
             l = self.db_get_tasks_list(archives, self.mask.get())
-            f.write("id;task;milestone;active;done;urgent;team;date\n")
-            for id, task, milestone, active, done, urgent, team, date in l:
-                c = "{};{};{};{};{};{};{};{}\n".format(id, task, milestone, active, done, urgent, team, date)
+            f.write("id;task;milestone;active;done;urgent;team;date;updated\n")
+            for id, task, milestone, active, done, urgent, team, date, updated in l:
+                c = "{};{};{};{};{};{};{};{};{}\n".format(id, task, milestone, active, done, urgent, team, date, updated)
                 f.write(c)
             f.close()
             return(len(l))
@@ -567,24 +628,28 @@ class to_do_app(object):
         l = self.db_get_tasks_list(archives, self.mask.get())
         teams = self.get_teams()
         i = 0
-        for id, task, milestone, active, done, urgent, team, date in l:
+        for id, task, milestone, active, done, urgent, team, date, updated in l:
+            if not date:
+                date = '----------'
             if archives:
-                lbl = "{0}|{1}|{2} ({3}) id={4}".format(str(milestone).ljust(8), str(date).ljust(10), task, team, id)
+                lbl = "{}|{}|{}|{}|{} (id={})".format(str(milestone).ljust(8),str(updated).ljust(10), str(date).ljust(10), team, task, id)
             elif int(done) > 0:
-                lbl = "{0}|{1}|{2}".format(str(milestone).ljust(8), str(date).ljust(10), task)
+                lbl = "{}|{}|{}|{}".format(str(milestone).ljust(8), str(updated).ljust(10), str(date).ljust(10), task)
             elif team == "N/A":
-                lbl = "{0}|{1}".format(str(milestone).ljust(8), task)
-            elif date:
-                lbl = "{0}|{1}|{2} ({3})".format(str(milestone).ljust(8), str(date).ljust(10), task, team)
+                lbl = "{}|{}".format(str(milestone).ljust(8), task)
             else:
-                lbl = "{0}|          |{1} ({2})".format(str(milestone).ljust(8), task, team)
+                lbl = "{}|{}|{}|{} ({})".format(str(milestone).ljust(8),str(updated).ljust(10), str(date).ljust(10), task, team)
             self.ui.lb.insert(i, lbl)
-            if int(done) > 0:
-                self.ui.lb.itemconfig(i, fg='grey', bg='white')
+            if archives:
+                self.ui.lb.itemconfig(i, fg="black", bg="white")
+            elif int(done) > 0:
+                self.ui.lb.itemconfig(i, fg='#A4A4A4', bg='white')
             elif int(urgent) > 0:
                 self.ui.lb.itemconfig(i, fg='white', bg='red')
             elif team == 'N/A' and len(task) > 1 and task[0] == "*":
-                self.ui.lb.itemconfig(i, fg='black', bg='#EEE') 
+                self.ui.lb.itemconfig(i, fg='black', bg='#EEE')
+            elif team != 'VAL' and is_urgent(date):
+                self.ui.lb.itemconfig(i, fg='white', bg='red')
             elif team in teams:
                 t_fg, t_bg = teams[team]
                 self.ui.lb.itemconfig(i, fg=t_fg, bg=t_bg) 
@@ -665,14 +730,22 @@ class to_do_app(object):
         # filterbar
         ui.fb = Frame(ui)
         ui.fb.pack(fill=X)
-        ui.fb.but = Button(ui.fb, text="Appliquer le filtre :", command=self.cb_filter)
-        ui.fb.but.pack(side=LEFT, padx=2, pady=2)
         self.mask = StringVar()
         self.mask.set("%")
-        ui.fb.src = Entry(ui.fb, textvariable=self.mask)
+        ui.fb.src = Entry(ui.fb, textvariable=self.mask, width=30)
         ui.fb.config(height=0)
-        ui.fb.src.pack(side=LEFT, expand=True, fill=X, padx=2, pady=2)
+        ui.fb.src.pack(side=LEFT, padx=2, pady=2)
+        ui.fb.but = Button(ui.fb, text="Filtrer", width=8, command=self.cb_filter)
+        ui.fb.but.pack(side=LEFT, padx=2, pady=2)
         self.filter = True
+        ui.fb.ex = Button(ui.fb, text="Importer", width=8, command=self.cb_import_csv)
+        ui.fb.ex.pack(side=LEFT,  padx=2, pady=2)
+        ui.fb.ex = Button(ui.fb, text="Exporter", width=8, command=self.cb_export_csv)
+        ui.fb.ex.pack(side=LEFT, padx=2, pady=2)
+        ui.fb.no = Button(ui.fb, text="Notes", width=8, command=self.cb_copy_notes)
+        ui.fb.no.pack(side=LEFT, padx=2, pady=2)
+        ui.fb.re = Button(ui.fb, text="Relancer", width=8, command=self.cb_restart)
+        ui.fb.re.pack(side=LEFT, padx=2, pady=2)
         # listbox
         ui.cf = Frame(ui)
         ui.cf.pack(fill=BOTH, expand=True)
@@ -685,13 +758,9 @@ class to_do_app(object):
         # statusbar
         ui.sb = Frame(ui)
         ui.sb.pack(fill=X)
-        ui.sb.ex = Button(ui.sb, text="Importer csv…", command=self.cb_import_csv)
-        ui.sb.ex.pack(side=LEFT, fill=Y)
-        ui.sb.ui_display_log = Label(ui.sb)
+        ui.sb.ui_display_log = Label(ui.sb, anchor=W, justify=LEFT)
         ui.sb.ui_display_log.pack(side=LEFT, expand=True, fill='both', padx=2, pady=2)
-        ui.sb.ex = Button(ui.sb, text="Exporter csv…", command=self.cb_export_csv)
-        ui.sb.ex.pack(side=RIGHT, fill=Y)
-        # Shorcuc
+        # Shorcut
         ui.bind("<F1>", self.cb_new_task)
         ui.lb.bind("<F2>", self.cb_copy_task)
         ui.bind("<F3>", self.cb_paste_task)
@@ -705,9 +774,12 @@ class to_do_app(object):
         ui.bind("<F11>", self.cb_open_console)
         ui.bind("<F12>", self.cb_toggle_display)
         ui.bind("<Escape>", self.cb_display_help)
+        ui.lb.bind("<space>", self.cb_display_task)
+        ui.lb.bind("<n>", self.cb_copy_notes)
         ui.fb.src.bind("<Return>", self.cb_filter)
         ui.lb.bind("<Double-Button-1>", self.cb_edit_task)
-        ui.lb.bind("<Double-Button-3>", self.cb_toggle_task_urgent)
+        ui.lb.bind("<Button-3>", self.cb_display_task)
+        ui.lb.bind("<Button-2>", self.cb_toggle_task_urgent)
         return(ui)
 
 
@@ -772,4 +844,4 @@ class console(object):
 
 if __name__ == '__main__':
     # start the program
-    run = to_do_app(PROGRAM, VERSION, DOCHELP)
+    run = start_to_do_app()
